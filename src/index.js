@@ -10,6 +10,7 @@ import Settings from './pages/Settings.jsx';
 import './styles/index.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import SettingsPage from './pages/Settings';
+import SpendingAnalytics from './pages/SpendingAnalytics.jsx';
 import Signup from './pages/Signup.jsx'
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -21,6 +22,7 @@ root.render(
             <Route path="/Settings" element={<SettingsPage />}></Route>
             <Route path="/ShoppingListEditor" element={<ShoppingListEditor />}></Route>
             <Route path="/Signup" element={<Signup />}></Route>
+            <Route path="/SpendingAnalytics" element={<SpendingAnalytics />} />
         </Routes>
     </BrowserRouter>
 );
