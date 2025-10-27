@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const User = require('./UserSchema')
+require('dotenv').config();
 app.use(express.json());
 app.use(cors())
 app.listen(9000, ()=> {
@@ -15,7 +16,7 @@ app.listen(9000, ()=> {
 })
 
 const mongoose = require('mongoose');
-const mongoString = "mongodb+srv://Kronos0117:Sharingan0117@icsi418y.iytsman.mongodb.net/ReceiptScanner"
+const mongoString = process.env.DB_KEY;
 mongoose.connect(mongoString)
 const database = mongoose.connection
 

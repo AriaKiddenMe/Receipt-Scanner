@@ -9,6 +9,9 @@ const UserSchema = new mongoose.Schema({
     l_name: String,
     username: String,
     passwordHash: String,
+    preferred_brands: [String], 
+    banned_brands: [String], 
+    allergens: [String]
 });
 
 const User = mongoose.model("User", UserSchema, "UserRecords");
