@@ -12,6 +12,7 @@ import 'bootstrap/dist/css/bootstrap.css';
 import SettingsPage from './pages/Settings';
 import SpendingAnalytics from './pages/SpendingAnalytics.jsx';
 import Signup from './pages/Signup.jsx'
+import ScannerOptions from './pages/ScannerOptions.jsx'
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -23,6 +24,7 @@ root.render(
             <Route path="/ShoppingListEditor" element={<ShoppingListEditor />}></Route>
             <Route path="/Signup" element={<Signup />}></Route>
             <Route path="/SpendingAnalytics" element={<SpendingAnalytics />} />
+            <Route path="/ScannerOptions" element={<ScannerOptions/>} />
         </Routes>
     </BrowserRouter>
 );
