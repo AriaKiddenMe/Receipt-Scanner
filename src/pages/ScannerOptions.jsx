@@ -1,6 +1,7 @@
 import React, {useState, useMemo} from 'react';
 import {Link} from "react-router-dom";
 import "../styles/ScannerOptions.css";
+import axios from 'axios'
 const ScannerOptions = () => {
     const [items, setItems] = useState([])
     function AddItems() {
@@ -28,6 +29,203 @@ const ScannerOptions = () => {
     function clear(){
         setItems([])
     }
+    const handleReceiptSubmission = async(event) => {
+        event.preventDefault()
+        const formReference = event.target
+        const store_name = formReference["store"].value
+        const store_location = formReference["location"].value
+        const store_phone = formReference["phone"].value
+        const purchase_date = formReference["date"].value
+        const purchase_time = formReference["time"].value
+        const total_price = formReference["totalPrice"].value
+        const tax_rate = formReference["rate"].value
+        let new_total
+        let new_tr
+        if (total_price === "" || total_price === null) {
+            new_total = "0";
+            new_total = Number(new_total)
+        }
+        else {
+            new_total = Number(total_price)
+        }
+        if (tax_rate === "" || tax_rate === null) {
+            new_tr = "0";
+            new_tr = Number(new_tr)
+        }
+        else {
+            new_tr = Number(tax_rate)
+        }
+        const line_items = items
+        //const current_user = currently_logged_user() 
+        const data_collection = {
+            store_name: store_name,
+            store_location: store_location,
+            store_phone: store_phone,
+            purchase_date: purchase_date,
+            purchase_time: purchase_time,
+            total_price: new_total,
+            tax_rate: new_tr,
+            items: line_items,
+            //generated_by_user: current_user
+        }
+        try {
+            const response = await axios.post('http://localhost:9000/generateReceiptRecord', data_collection)
+            if (response.status === 200 || response.status === 201) {
+                alert('Receipt record successfully created and saved')
+                clear()
+                formReference.reset()
+            }
+            else {
+                alert('Receipt record creation failed. Please try again')
+            }
+        }
+        catch(error) {
+            alert('System error occured. Please try again')
+        }
+    }
+
+    const handleScan = async(event) => {
+        event.preventDefault()
+        const file_container = document.getElementById("scannedReceiptID")
+        if (file_container.files.length === 0) {
+            alert('Please upload a file')
+            return
+        }
+        const file = file_container.files[0]
+        const forms_data = new FormData()
+        forms_data.append("scannedReceipt", file)
+        try {
+            const response = await axios.post('http://localhost:9000/scanAzureAPI', forms_data, {
+            headers: {"Content-Type": "multipart/form-data"}
+            })
+            if (response.status === 200 || response.status === 201) {
+                console.log(JSON.stringify(response.data.fields, null, 2))
+                const fields = response.data.fields
+                if(!fields || Object.keys(fields).length === 0) {
+                    alert ('Unable to read and process receipt')
+                    return
+                }
+                //Values to be extracted from fields after Azure Scan.
+                console.log(Object.keys(fields))
+                let store_name
+                if (fields.MerchantName) {
+                    store_name = fields.MerchantName.content
+                }
+                else {
+                    store_name = ""
+                }
+                let store_location
+                if (fields.MerchantAddress) {
+                    store_location = fields.MerchantAddress.content
+                }
+                else {
+                    store_location = ""
+                }
+                let store_phone
+                if (fields.MerchantPhoneNumber) {
+                    store_phone = fields.MerchantPhoneNumber.content
+                }
+                else {
+                    store_phone = ""
+                }
+                let purchase_date
+                if (fields.TransactionDate) {
+                    purchase_date = fields.TransactionDate.content
+                }
+                else {
+                    purchase_date = ""
+                }
+                let purchase_time
+                if (fields.TransactionTime) {
+                    purchase_time = fields.TransactionTime.content
+                }
+                else {
+                    purchase_time = ""
+                }
+                let total_price = 0
+                if (fields.Total && fields.Total.valueCurrency) {
+                    total_price = fields.Total.valueCurrency.amount
+                }
+                else {
+                    total_price = 0
+                }
+                let tax_rate = 0
+                if (fields.TotalTax && fields.TotalTax.valueCurrency) {
+                    tax_rate = fields.TotalTax.valueCurrency.amount
+                }
+                else if (fields.Tax && fields.Tax.valueCurrency) {
+                    tax_rate = fields.Tax.valueCurrency.amount
+                }
+                else {
+                    tax_rate = 0
+                }
+                let items = []
+                if(fields.Items && fields.Items.valueArray) {
+                    for (var entry of fields.Items.valueArray) {
+                        let container = entry.valueObject
+                        let item_name = ""
+                        if(container.Description) {
+                            item_name = container.Description.content
+                        }
+                        else if (container.Name){
+                            item_name = container.Name.content
+                        }
+                        let qty = 1
+                        if(container.Quantity && container.Quantity.valueNumber) {
+                            qty = container.Quantity.valueNumber    
+                        }
+                        let price = 0
+                        if(container.Price && container.Price.valueCurrency) {
+                            price = container.Price.valueCurrency.amount
+                        }
+                        else if(container.TotalPrice && container.TotalPrice.valueCurrency) {
+                            price = container.TotalPrice.valueCurrency.amount   
+                        }
+                        let row = {
+                            Item: item_name,
+                            quantity: qty,
+                            price: price,
+                            type_discount: "none",
+                            discount: 0 
+                        }
+                        items.push(row)
+                    }
+                }
+                else {
+                    items = []
+                }   
+                const data_collection = {
+                    store_name: store_name,
+                    store_location: store_location,
+                    store_phone: store_phone,
+                    purchase_date: purchase_date,
+                    purchase_time: purchase_time,
+                    total_price: total_price,
+                    tax_rate: tax_rate,
+                    items: items,
+                    //generated_by_user: current_user
+                }  
+                try {
+                    const response_record = await axios.post('http://localhost:9000/generateReceiptRecord', data_collection)
+                        if (response_record.status === 200 || response_record.status === 201) {
+                            alert('Receipt record successfully created and saved')
+                            clear()
+                            file_container.value = ""
+                        }
+                    else {
+                        alert('Receipt record creation failed. Please try again')
+                    }
+                }
+                catch(error) {
+                    alert('System error occured. Please try again')
+                }
+                          
+            }
+        }
+        catch(error) {
+            alert('System error occured. Please try again')
+        }
+    }
     return(
         <div className="alternating">
         <div className="receipt-page">
@@ -36,15 +234,24 @@ const ScannerOptions = () => {
                 <h1 className="title">Record A Receipt</h1>
             </div>
             <div className="card">
-                <form>
+                <form onSubmit ={handleReceiptSubmission}>
                     <div className="gridding">
                         <div className="fields">
                             <label className="label">Upload Scanned Receipt:</label>
-                            <input className="input_and_select" type="file" name="scannedReceipt" accept=".pdf,.png,.jpeg,.jpg"/>
+                            <input className="input_and_select" type="file" id="scannedReceiptID" name="scannedReceipt" accept=".pdf,.png,.jpeg,.jpg"/>
                         </div>
+                        <button type="button" onClick={handleScan}>Scan</button>
                         <div className="fields">
                             <label className="label">Store Name:</label>
                             <input className="input_and_select" type="text" name="store" placeholder="Name of store (example: Whole Food's)"/>
+                        </div>
+                        <div className="fields">
+                            <label className="label">Store Location:</label>
+                            <input className="input_and_select" type="text" name="location" placeholder="Location"/>
+                        </div>
+                        <div className="fields">
+                            <label className="label">Store Phone Number:</label>
+                            <input className="input_and_select" type="text" name="phone" placeholder="Phone Number"/>
                         </div>
                         <div className="fields">
                             <label className="label">Date of Purchase:</label>
@@ -59,14 +266,14 @@ const ScannerOptions = () => {
                             <input className="input_and_select" type="number" name="totalPrice" min="0" step="0.01"/>
                         </div>
                         <div className="fields">
-                            <label className="label">Tax Rate:</label>
-                            <input className="input_and_select" type="number" name="rate" min="0" step="0.01" placeholder="Tax %"/>
+                            <label className="label">Tax Amount:</label>
+                            <input className="input_and_select" type="number" name="rate" min="0" step="0.01" placeholder="Tax"/>
                         </div>
                     </div>
                     <div className="toolbar">
                         <button type="button" onClick={AddItems}>+Add Item</button>
                         <button type="button" onClick={clear}>Clear All</button>
-                        <button type="submit">Submit</button>
+                        <button type="submit">Manual</button>
 
                     </div>
                     <div className="table-wrap">
