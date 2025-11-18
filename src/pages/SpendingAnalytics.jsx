@@ -13,7 +13,7 @@ const SpendingAnalytics = () => {
         <div className="navigation-links-container">
           <nav className="navigation-buttons">
             <Link to="/home" className="navigation-item">Home</Link>
-            <Link to="/spending-analytics" className="navigation-item active">Spending Analytics</Link>
+            <Link to="/ScannerOptions" className="navigation-item active">Record Receipt</Link>
             <Link to="/price-comparison" className="navigation-item">Price Comparison</Link>
             <Link to="/settings" className="navigation-item">Settings</Link>
           </nav>
