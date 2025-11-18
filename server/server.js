@@ -3,12 +3,18 @@
 // promptly stores that as a record in the database or pulls up stored user records from the database
 // in which to compare provided user login credentials with (through the login page) to try and find a match. 
 
+const axios = require('axios')
+const contain_multer = require('multer');
+const file_upload = contain_multer();
 const {hashing, verifyHash} = require('./Helpers/Hash')
 const express = require('express');
 const cors = require('cors');
 const app = express();
 const User = require('./UserSchema')
+const Receipt = require('./ReceiptSchema')
 require('dotenv').config();
+const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT;
+const AZURE_DI_KEY = process.env.AZURE_DI_KEY;
 app.use(express.json());
 app.use(cors())
 app.listen(9000, ()=> {
@@ -90,4 +96,87 @@ app.get('/getUser', async(req, res) => {
         res.status(500).send(error)
     }
 })
+app.post('/scanAzureAPI', file_upload.single("scannedReceipt"), async(req, res) => {
+    if(!req.file) {
+        return res.status(400).send("No file has been uploaded")
+    }
+    const file_container = req.file.buffer
+    const url = AZURE_DI_ENDPOINT + "documentintelligence/documentModels/prebuilt-receipt:analyze?api-version=2024-11-30"
+    let location    
+    try {
+        const response = await axios.post(url, file_container,{
+            headers: {
+                "Ocp-Apim-Subscription-Key": AZURE_DI_KEY,
+                "Content-Type": "application/octet-stream",
+            },
+        })
+        if(response.status === 202) {
+            location = response.headers["operation-location"]
 
+        }
+        else {
+            return res.status(502).send("Server-side error")
+        }
+    }
+    catch(error) {
+        return res.status(500).send(error)
+    }
+    let result = null
+    for(let i = 0; i < 30; i++) {
+        let sol = await axios.get(location, {headers: {"Ocp-Apim-Subscription-Key": AZURE_DI_KEY}})
+        let body = sol.data
+        if(body.status === "succeeded") {
+            result = body
+            break
+        }
+        else if (body.status === "failed") {
+            return res.status(502).send("Server-side error")
+        }
+        
+        if(i < 29 ) {
+            await new Promise(res => setTimeout(res, 1000))
+        }
+    }
+    if (result === null) {
+        return res.status(504).send("Timeout has occured")
+    }
+    let fields_container
+    if (result?.analyzeResult) {
+        if(result.analyzeResult?.documents && result.analyzeResult.documents.length > 0) {
+            fields_container =  result.analyzeResult.documents[0].fields
+        }
+        else {
+            return res.status(200).send({fields: null})
+        }
+    }
+    else {
+        if(result?.documents && result.documents.length > 0) {
+            fields_container = result.documents[0].fields
+        }
+        else {
+            return res.status(200).send({fields: null})            
+        }
+    }
+    return res.status(200).send({fields: fields_container})
+})
+app.post('/generateReceiptRecord', async (req, res) => {
+    try {
+        const receipt_record = new Receipt({
+            store_name: req.body.store_name,
+            store_location: req.body.store_location,
+            store_phone: req.body.store_phone,
+            purchase_date: req.body.purchase_date,
+            purchase_time: req.body.purchase_time,
+            total_price: req.body.total_price,
+            tax_rate: req.body.tax_rate,
+            items: req.body.items,
+            //generated_by_user: req.body.generated_by_user,
+        })
+        receipt_record.save()
+        console.log(`Receipt Record created! ${receipt_record}`)
+        res.status(200).send(true)
+    }
+    catch(error) {
+        res.status(500).send(error)
+    }
+})
