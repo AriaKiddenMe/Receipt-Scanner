@@ -4,6 +4,7 @@ const ItemSchema = new mongoose.Schema({
     Item: String,
     quantity: Number,
     price: Number,
+    unitType: {type: String, enum: ["qty", "lb"], default: "qty"},
     type_discount: String,
     discount: Number,}, 
     {_id: false}

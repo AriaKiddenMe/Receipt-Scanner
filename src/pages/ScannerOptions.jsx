@@ -6,7 +6,7 @@ const ScannerOptions = () => {
     const [items, setItems] = useState([])
     function AddItems() {
         var newItems;
-        newItems ={Item: "", quantity: 1, price: 0.00, type_discount: "percent", discount: 0.00}
+        newItems ={Item: "", quantity: 1, price: 0.00, unitType: "qty", type_discount: "percent", discount: 0.00}
         setItems(previous_Items => [...previous_Items, newItems])
     }
     function update(i, field, input) {
@@ -57,6 +57,33 @@ const ScannerOptions = () => {
         }
         const line_items = items
         //const current_user = currently_logged_user() 
+        const tax_holder = new_tr
+        let subt = 0
+        line_items.forEach((item) => {
+            const price_unit = Number(item.price) || 0
+            const quantity = Number(item.quantity) || 0
+            const discounts = Number(item.discount) || 0
+            let discount_applied = 0
+            let start_line = price_unit * quantity
+            if(item.type_discount === "percent") {
+                discount_applied = start_line * (discounts / 100)
+            }
+            else if(item.type_discount === "amount") {
+                discount_applied = discounts
+            }
+            let item_total = start_line - discount_applied
+            if(item_total < 0) {
+                item_total = 0
+            }
+            subt = subt + item_total
+        })
+        let total_sum = subt + tax_holder
+        total_sum = total_sum.toFixed(2)
+        new_total = new_total.toFixed(2)
+        if (new_total != total_sum) {
+            alert('Input total is not equal to computed total. Please try again')
+            return
+        }
         const data_collection = {
             store_name: store_name,
             store_location: store_location,
@@ -174,6 +201,10 @@ const ScannerOptions = () => {
                         if(container.Quantity && container.Quantity.valueNumber) {
                             qty = container.Quantity.valueNumber    
                         }
+                        let unitType = "qty"
+                        if(qty % 1 != 0) {
+                            unitType = "lb"
+                        }
                         let price = 0
                         if(container.Price && container.Price.valueCurrency) {
                             price = container.Price.valueCurrency.amount
@@ -185,6 +216,7 @@ const ScannerOptions = () => {
                             Item: item_name,
                             quantity: qty,
                             price: price,
+                            unitType: unitType,
                             type_discount: "none",
                             discount: 0 
                         }
@@ -281,7 +313,8 @@ const ScannerOptions = () => {
                         <thead>
                             <tr>
                                 <th className="table-header col-item" scope="col">Item</th>
-                                <th className="table-header col-qty" scope="col">Qty</th>
+                                <th className="table-header col-qty" scope="col">Qty / lbs</th>
+                                <th className="table-header col-type" scope="col">Type</th>
                                 <th className="table-header col-price" scope="col">Unit Price</th>
                                 <th className="table-header col-discountType" scope="col">Discount</th>
                                 <th className="table-header col-remove" scope="col">Remove</th>
@@ -294,8 +327,11 @@ const ScannerOptions = () => {
                                     <input className="table-input_and_select" type ="text" value={row.Item} onChange={(e)=>update(index, "Item", e.target.value)}/>
                                 </td>
                                 <td className="table-data-cells">
-                                    <input className="table-input_and_select" type="number" min="1" step="1" value={row.quantity} onChange={(e)=>update(index, "quantity", e.target.value)}/>
+                                    <input className="table-input_and_select" type="number" min="0" step="0.01" value={row.quantity} onChange={(e)=>update(index, "quantity", e.target.value)}/>
                                 </td>
+                                <td className="table-data-cells"><select className="table-input_and_select" value={row.unitType || "qty"} onChange={(e)=>update(index, "unitType", e.target.value)}>
+                                    <option value="qty">qty</option>
+                                    <option value="lb">lbs</option></select></td>
                                 <td className="table-data-cells">
                                     <input className="table-input_and_select" type="number" min="0" step="0.01" value={row.price} onChange={(e)=>update(index, "price", e.target.value)}/>
                                 </td>
