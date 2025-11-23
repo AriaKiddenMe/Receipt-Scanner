@@ -21,14 +21,16 @@ const Login = () => {
         .catch((err) => alert('Error in Login'))
 }    
     return (
-        <div className="container"> 
+        <div className="login-container"> 
             <div className="image-sidebar">
-                Image goes here
+                <p>
+                    Image sidebar goes here.
+                </p>
             </div>
             <div className="main-content">
                 <div className="introduction">
                     <p>
-                        Enter information about receipt scanner.
+                        Login and start saving
                     </p>
                 </div>
                 <div className="form">
@@ -54,24 +56,29 @@ const Login = () => {
                             autoComplete="password"
                             onChange={(e) => setPassword(e.target.value)}
                             />
+                            {/* <input type = "checkbox" 
+                            className='checkbox'
+                            onChange = {() => setShowPass(v => !v)}
+                            style = {{marginLeft : 8}}/> */}
                         </div>
                         <div className="form-checkbox">
-                            <input type = "checkbox" 
-                            onChange = {() => setShowPass(v => !v)}
-                            style = {{marginLeft : 8}}/> -- Show Password
+
                         </div>
-                        <div className='submit-button'>
-                            <button
-                                type="button" onClick={(event) => {
-                                handleLogin(event, username, password)}}>
-                                Submit
-                            </button><br/>
-                        </div>
-                        <div className="link">
-                            <Link
+                        <div className='form-actions'>
+                            <div className='form-action'>
+                                <button
+                                    className='submit-btn'
+                                    type="button" onClick={(event) => {
+                                    handleLogin(event, username, password)}}>
+                                    Submit
+                                </button><br/>
+                            </div>
+                            <div className='form-action'>
+                                <Link
                                 to = "/Signup">
                                 Signup
-                            </Link>
+                                </Link>
+                            </div>
                         </div>
                     </form>
                 </div>
