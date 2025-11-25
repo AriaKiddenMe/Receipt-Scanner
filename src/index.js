@@ -12,8 +12,9 @@ import 'bootstrap/dist/css/bootstrap.css';
 import SettingsPage from './pages/Settings';
 import SpendingAnalytics from './pages/SpendingAnalytics.jsx';
 import ScannerOptions from './pages/ScannerOptions.jsx';
-import Signup from './pages/Signup.jsx'
-import ScannerOptions from './pages/ScannerOptions.jsx'
+import Signup from './pages/Signup.jsx';
+import Home from './pages/Home.jsx';
+
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -21,15 +22,12 @@ root.render(
         <Routes>
             <Route path="/" element={<Login />}></Route>
             <Route path="/Login" element={<Login />}></Route>
+            <Route path="/Home" element={<Home />}></Route>
             <Route path="/Settings" element={<SettingsPage />}></Route>
             <Route path="/ShoppingListEditor" element={<ShoppingListEditor />}></Route>
             <Route path="/Signup" element={<Signup />}></Route>
             <Route path="/SpendingAnalytics" element={<SpendingAnalytics />} />
-<<<<<<< Updated upstream
-            <Route path="/ScannerOptions" element={<ScannerOptions/>} />
-=======
             <Route path="/ScannerOptions" element={<ScannerOptions />} />
->>>>>>> Stashed changes
         </Routes>
     </BrowserRouter>
 );

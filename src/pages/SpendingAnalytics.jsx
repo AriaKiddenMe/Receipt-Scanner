@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import "../styles/SpendingAnalytics.css";
 
 const SpendingAnalytics = () => {
@@ -12,11 +12,40 @@ const SpendingAnalytics = () => {
         <h2 className="sidebar-title">Receipt Scanner</h2>
         <div className="navigation-links-container">
           <nav className="navigation-buttons">
-            <Link to="/home" className="navigation-item">Home</Link>
-            <Link to="/ScannerOptions" className="navigation-item active">Record Receipt</Link>
-            <Link to="/price-comparison" className="navigation-item">Price Comparison</Link>
-            <Link to="/settings" className="navigation-item">Settings</Link>
+            <NavLink
+              to="/home"
+              className={({ isActive }) => isActive ? "navigation-item active" : "navigation-item"}
+            >
+              Home
+            </NavLink>
+            <NavLink
+              to="/ScannerOptions"
+              className={({ isActive }) => isActive ? "navigation-item active" : "navigation-item"}
+            >
+              Record Receipt
+            </NavLink>
+            <NavLink
+              to="/SpendingAnalytics"
+              className={({ isActive }) => isActive ? "navigation-item active" : "navigation-item"}
+            >
+              Spending Analytics
+            </NavLink>
+            <NavLink
+              to="/ShoppingListEditor"
+              className={({ isActive }) => isActive ? "navigation-item active" : "navigation-item"}
+            >
+              Shopping List
+            </NavLink>
+            <NavLink
+              to="/Settings"
+              className={({ isActive }) => isActive ? "navigation-item active" : "navigation-item"}
+            >
+              Settings
+            </NavLink>
           </nav>
+        </div>
+        <div className="signout-container">
+          <Link to="/Login" className="navigation-item signout-button">Sign Out</Link>
         </div>
       </div>
       <div className="content">
