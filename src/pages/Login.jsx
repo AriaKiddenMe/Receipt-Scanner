@@ -56,13 +56,6 @@ const Login = () => {
                             autoComplete="password"
                             onChange={(e) => setPassword(e.target.value)}
                             />
-                            {/* <input type = "checkbox" 
-                            className='checkbox'
-                            onChange = {() => setShowPass(v => !v)}
-                            style = {{marginLeft : 8}}/> */}
-                        </div>
-                        <div className="form-checkbox">
-
                         </div>
                         <div className='form-actions'>
                             <div className='form-action'>
