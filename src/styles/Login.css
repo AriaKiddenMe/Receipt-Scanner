@@ -1,0 +1,66 @@
+.login-container {
+    display: flex;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;     
+    padding: 0px;
+}
+
+.image-sidebar {
+    width: 40%;
+    background: linear-gradient(135deg, #8b4fb3, #e00000, #f7950c, #0028f3);
+    color: white; 
+    padding: 20px;
+    display: flex;
+    min-height: 100vh;
+    box-shadow: 2px 0 6px rgba(0,0,0,0.1);
+}
+
+.main-content {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin:auto;
+    flex: 1;
+    padding: 40px;
+    background-color: #f0f2f5; 
+}
+
+.introduction p{
+    font-size: 2rem;
+    font-family: "Georgia";
+    color: #333;
+}
+
+.form-field {
+    margin:10px;
+}
+
+.form-field input{
+    border-radius: 10px;
+    height:40px;
+    width: 300px;
+}
+
+.form-actions {
+    display: flex;
+    flex-direction: column;
+    align-items:center;
+}
+
+.form-action {
+    padding:10px;
+    display:flex;
+}
+
+.submit-btn {
+    padding: 6px 30px;
+    border-radius: 20px;
+    height: 40px;
+    border: none;
+    background-color: #405de6;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
