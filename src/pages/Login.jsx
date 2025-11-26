@@ -16,9 +16,11 @@ const Login = () => {
             .then((res) => {
                 if (res.data) {
                     navigate('/Home')
+                } else {
+                    document.querySelector('#error-msg').textContent = "Incorrect Login";
                 }
             })
-            .catch(document.querySelector('#error-msg').textContent = "Incorrect Login")
+            .catch()
 }    
     return (
         <div className="login-container"> 

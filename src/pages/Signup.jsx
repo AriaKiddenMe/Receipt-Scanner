@@ -1,4 +1,4 @@
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import React, { useState } from 'react';
 import axios from 'axios'
 
@@ -10,19 +10,20 @@ const Signup = () => {
     const [l_name, setLastName] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+
     const handleSignUp = (event, f_name, l_name, username, password) => {
-    axios.post('http://localhost:9000/createUser', { f_name, l_name, username, password })
-    .then((res) => {
-        if(res.data === true) {
-            alert('Account successfully created!')
-        }
-        else if(res.data === 'Username already exists')
-            alert('Username already exists')
-        else {
-            alert('Signup failed. Please try again')
-        }
-    })
-        .catch((err) => alert('Error in Signing Up'))
+        event.preventDefault()
+        axios.post('http://localhost:9000/createUser', { f_name, l_name, username, password })
+        .then((res) => {
+            if(res.data === true) {
+                document.querySelector('#error-msg').textContent = ""
+                navigate('/Login')
+            } else {
+                document.querySelector('#error-msg').textContent = "Invalid Sign Up";
+            }
+        })
+        .catch()
     }        
     return (
         <div className="login-container"> 
@@ -37,11 +38,13 @@ const Signup = () => {
                         Sign up to start saving
                     </p>
                 </div>
+                <div id='error-msg'></div>
                 <div className='form'>
-                    <form>
+                    <form onSubmit={(event) => handleSignUp(event, f_name, l_name, username, password)}>
                         <div className='form-field'>
                             <label htmlFor="fname">First Name:</label> <br/>
                             <input
+                            required
                             type="text"
                             value = {f_name}
                             id = "fname"
@@ -53,6 +56,7 @@ const Signup = () => {
                         <div className='form-field'>
                             <label htmlFor="lname">Last Name:</label> <br/>
                             <input
+                            required
                             type="text"
                             value = {l_name}
                             id = "lname"
@@ -64,6 +68,7 @@ const Signup = () => {
                         <div className='form-field'>
                             <label htmlFor="username">Username:</label> <br/>
                             <input
+                            required
                             type="text"
                             value = {username}
                             id = "username"
@@ -75,6 +80,7 @@ const Signup = () => {
                         <div className='form-field'>
                             <label htmlFor="password">Password:</label> <br/>
                             <input
+                            required
                             type={showPass? "text": "password"}
                             value = {password}
                             id="password"
@@ -87,7 +93,7 @@ const Signup = () => {
                             <div className='form-action'>
                                 <button
                                     className='submit-btn'
-                                    type="button" onClick={(event) => handleSignUp(event, f_name, l_name, username, password)}>
+                                    type="submit">
                                     Submit
                                 </button><br/>
                             </div>
