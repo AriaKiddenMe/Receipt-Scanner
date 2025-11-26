@@ -209,5 +209,40 @@ app.get('/getSpendingByDay', async (req, res) => {
     }
 });
 
+app.get("/getSpendingByItem", async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.query;
+    if (!fromDate || !toDate) return res.status(400).send("fromDate and toDate are required");
+
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    to.setHours(23, 59, 59, 999);
+
+    const receipts = await Receipt.find({
+      purchase_date: { $gte: from, $lte: to }
+    }).lean();
+
+    const itemTotals = {};
+    receipts.forEach(r => {
+      r.items.forEach(item => {
+        const name = item.Item || "Unnamed Item";
+        const total = (Number(item.price) || 0) * (Number(item.quantity) || 0);
+        itemTotals[name] = (itemTotals[name] || 0) + total;
+      });
+    });
+
+    const result = Object.keys(itemTotals).map(name => ({
+      item: name,
+      amount: itemTotals[name]
+    }));
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
+});
+
+
 
 

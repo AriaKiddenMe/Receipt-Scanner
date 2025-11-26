@@ -14,6 +14,7 @@ import SpendingAnalytics from './pages/SpendingAnalytics.jsx';
 import ScannerOptions from './pages/ScannerOptions.jsx';
 import Signup from './pages/Signup.jsx';
 import Home from './pages/Home.jsx';
+import FAQ from "./pages/FAQ";
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -28,6 +29,7 @@ root.render(
             <Route path="/Signup" element={<Signup />}></Route>
             <Route path="/SpendingAnalytics" element={<SpendingAnalytics />} />
             <Route path="/ScannerOptions" element={<ScannerOptions />} />
+            <Route path="/FAQ" element={<FAQ />} />
         </Routes>
     </BrowserRouter>
 );
