@@ -1,4 +1,4 @@
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import React, { useState } from 'react';
 import axios from 'axios'
 
@@ -8,17 +8,17 @@ const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const[showPass, setShowPass] = useState(false);
+    const navigate = useNavigate();
+
     const handleLogin = (event, username, password) => {
-    axios.get('http://localhost:9000/getUser', { params: { username, password}})
-        .then((res) => {
-            if (res.data) {
-                alert('Login Successful')
-            }
-            else {
-                alert('Wrong Credentials')
-            }
-        })
-        .catch((err) => alert('Error in Login'))
+        event.preventDefault()
+        axios.get('http://localhost:9000/getUser', { params: { username, password}})
+            .then((res) => {
+                if (res.data) {
+                    navigate('/Home')
+                }
+            })
+            .catch(document.querySelector('#error-msg').textContent = "Incorrect Login")
 }    
     return (
         <div className="login-container"> 
@@ -33,11 +33,13 @@ const Login = () => {
                         Login and start saving
                     </p>
                 </div>
+                <div id='error-msg'></div>
                 <div className="form">
-                    <form>
+                    <form onSubmit={(event) => {handleLogin(event, username, password)}}>
                         <div className="form-field">
                             <label htmlFor="username">Username</label><br/>
                             <input
+                            required
                             type="text"
                             value={username}
                             id = "username"
@@ -49,6 +51,7 @@ const Login = () => {
                         <div className="form-field">
                             <label htmlFor="password">Password:</label><br/>
                             <input
+                            required
                             type={showPass? "text": "password"}
                             id="password"
                             value={password}
@@ -61,8 +64,7 @@ const Login = () => {
                             <div className='form-action'>
                                 <button
                                     className='submit-btn'
-                                    type="button" onClick={(event) => {
-                                    handleLogin(event, username, password)}}>
+                                    type="submit">
                                     Submit
                                 </button><br/>
                             </div>

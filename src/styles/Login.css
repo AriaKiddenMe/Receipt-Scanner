@@ -64,3 +64,9 @@
     cursor: pointer;
     transition: background 0.3s, transform 0.2s;
 }
+
+#error-msg {
+    text-align: center;
+    color:red;
+    font-size:smaller;
+}
