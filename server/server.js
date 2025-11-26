@@ -28,7 +28,7 @@ const database = mongoose.connection
 
 database.on('error', (error) => console.log(error))
 
-database.once('connected', () => console.log('Databased Connected'))
+database.once('connected', () => console.log('Database Connected'))
 
 // Creates and stores new user accounts in the database while also checking if the provided 
 // account to be created has a username that's already in use, if so, no account is created.
@@ -165,14 +165,14 @@ app.post('/generateReceiptRecord', async (req, res) => {
             store_name: req.body.store_name,
             store_location: req.body.store_location,
             store_phone: req.body.store_phone,
-            purchase_date: req.body.purchase_date,
+            purchase_date: new Date(req.body.purchase_date),
             purchase_time: req.body.purchase_time,
             total_price: req.body.total_price,
             tax_rate: req.body.tax_rate,
             items: req.body.items,
             //generated_by_user: req.body.generated_by_user,
         })
-        receipt_record.save()
+        await receipt_record.save()
         console.log(`Receipt Record created! ${receipt_record}`)
         res.status(200).send(true)
     }
@@ -180,3 +180,34 @@ app.post('/generateReceiptRecord', async (req, res) => {
         res.status(500).send(error)
     }
 })
+
+
+app.get('/getSpendingByDay', async (req, res) => {
+    try {
+        const { fromDate, toDate } = req.query;
+        if (!fromDate || !toDate) return res.status(400).send("fromDate and toDate are required");
+
+        const from = new Date(fromDate);
+        const to = new Date(toDate);
+        to.setHours(23, 59, 59, 999);
+
+        const receipts = await Receipt.find({
+            purchase_date: { $gte: from, $lte: to }
+        }).lean();
+
+        const spendingByDay = {};
+        receipts.forEach(r => {
+            const day = r.purchase_date.toISOString().split("T")[0];
+            if (!spendingByDay[day]) spendingByDay[day] = 0;
+            spendingByDay[day] += r.total_price;
+        });
+        const chartData = Object.entries(spendingByDay).map(([date, amount]) => ({ date, amount }));
+        res.status(200).send(chartData);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Server error");
+    }
+});
+
+
+

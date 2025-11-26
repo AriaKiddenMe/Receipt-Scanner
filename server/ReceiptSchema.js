@@ -14,7 +14,7 @@ const ReceiptSchema = new mongoose.Schema( {
     store_name: String,
     store_location: String,
     store_phone: String,
-    purchase_date: String,
+    purchase_date: { type: Date },
     purchase_time: String,
     total_price: Number,
     tax_rate: Number,
