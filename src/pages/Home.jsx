@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import {React, useEffect} from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import "../styles/SpendingAnalytics.css";
 
 const Home = () => {
@@ -10,6 +10,15 @@ const Home = () => {
     month: "long",
     day: "numeric",
   });
+
+  const user = localStorage.getItem('user');
+  const navigate = useNavigate();
+  useEffect(() => {
+    console.log("user", user);
+    if (!user) {
+       navigate('/Login');
+    }
+  }, [user, navigate]);
 
   return (
     <div className="layout">
@@ -32,7 +41,7 @@ const Home = () => {
       </div>
 
       <div className="content">
-        <h1>Welcome to Receipt Scanner "USER NAME GOES HERE"</h1>
+        <h1>Welcome to Receipt Scanner {user}</h1>
         <p>{formattedDate}</p>
       </div>
     </div>

@@ -8,20 +8,25 @@ const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const[showPass, setShowPass] = useState(false);
+
     const navigate = useNavigate();
 
     const handleLogin = (event, username, password) => {
         event.preventDefault()
         axios.get('http://localhost:9000/getUser', { params: { username, password}})
             .then((res) => {
+                console.log("res data:", res.data);
                 if (res.data) {
-                    navigate('/Home')
+                    localStorage.setItem('user', username);
+                    navigate('/Home');
                 } else {
                     document.querySelector('#error-msg').textContent = "Incorrect Login";
                 }
             })
-            .catch()
-}    
+            .catch((err) => {
+                console.log("error logging in");
+            })
+    }    
     return (
         <div className="login-container"> 
             <div className="image-sidebar">
@@ -37,7 +42,7 @@ const Login = () => {
                 </div>
                 <div id='error-msg'></div>
                 <div className="form">
-                    <form onSubmit={(event) => {handleLogin(event, username, password)}}>
+                    <form onSubmit={(event) => handleLogin(event, username, password)}>
                         <div className="form-field">
                             <label htmlFor="username">Username</label><br/>
                             <input
