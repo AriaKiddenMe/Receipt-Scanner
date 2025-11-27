@@ -1,8 +1,12 @@
-import {React, useEffect} from "react";
+import {React, useEffect, useState} from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import axios from 'axios'
+
 import "../styles/SpendingAnalytics.css";
 
 const Home = () => {
+  const [amountSpent, setAmountSpent] = useState(0);
+
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "long",
@@ -11,13 +15,26 @@ const Home = () => {
     day: "numeric",
   });
 
+  const getThisWeeksItems = async () => {
+    try {
+    const res = await axios.get("http://localhost:9000/getThisWeeksItems", {
+        params: {user}
+      });
+    setAmountSpent(res.data.spentThisWeek);
+    } catch(err) {
+      console.error(err);
+    }
+  }
+
   const user = localStorage.getItem('user');
   const navigate = useNavigate();
   useEffect(() => {
     console.log("user", user);
     if (!user) {
        navigate('/Login');
+       return;
     }
+    getThisWeeksItems();
   }, [user, navigate]);
 
   return (
@@ -43,6 +60,7 @@ const Home = () => {
       <div className="content">
         <h1>Welcome to Receipt Scanner {user}</h1>
         <p>{formattedDate}</p>
+        <p>You spent ${amountSpent} this week.</p>
       </div>
     </div>
   );

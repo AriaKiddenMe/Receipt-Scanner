@@ -11,11 +11,12 @@ const Login = () => {
 
     const navigate = useNavigate();
 
+    localStorage.clear();
+
     const handleLogin = (event, username, password) => {
         event.preventDefault()
         axios.get('http://localhost:9000/getUser', { params: { username, password}})
             .then((res) => {
-                console.log("res data:", res.data);
                 if (res.data) {
                     localStorage.setItem('user', username);
                     navigate('/Home');

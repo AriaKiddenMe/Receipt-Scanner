@@ -12,7 +12,7 @@ const cors = require('cors');
 const app = express();
 const User = require('./UserSchema')
 const Receipt = require('./ReceiptSchema')
-require('dotenv').config();
+require('dotenv').config({path:'./.env'});
 const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT;
 const AZURE_DI_KEY = process.env.AZURE_DI_KEY;
 app.use(express.json());
@@ -23,8 +23,8 @@ app.listen(9000, ()=> {
 
 const mongoose = require('mongoose');
 const mongoString = process.env.DB_KEY;
-mongoose.connect(mongoString)
-const database = mongoose.connection
+mongoose.connect(mongoString);
+const database = mongoose.connection;
 
 database.on('error', (error) => console.log(error))
 
@@ -243,6 +243,33 @@ app.get("/getSpendingByItem", async (req, res) => {
   }
 });
 
+//get the currently logged in user using localStorage, and retrieve all of the items from the last week
+app.get('/getThisWeeksItems', async (req, res) => {
+    try {
+        const username = req.user;
+        const to = new Date();
+        const from = to.getDate()-7;
 
+        const receipts = await Receipt.find({
+            purchase_date: { $gte: from, $lte: to }//,
+            //generated_by_user: username
+        }).lean();
+
+        const thisWeeksItems = {};
+        receipts.forEach(r => {
+            thisWeeksItems.concat(r.items);
+        });
+
+        let spentThisWeek = 0;
+        thisWeeksItems.forEach(i => {
+            spentThisWeek += i.price;
+        });
+
+        res.status(200).send({thisWeeksItems, spentThisWeek});
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Server error");
+    }
+});
 
 
