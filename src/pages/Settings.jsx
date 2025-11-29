@@ -1,6 +1,11 @@
 const Settings = () => {
-    return (
-        <h1>Settings</h1>
-    );
+return (
+<div className="layout">
+    <Sidebar/>
+    <div className="content">
+        <h1>Price Search</h1>
+    </div>
+</div>
+);
 };
-export default Settings; 
+export default Settings;

@@ -1,6 +1,11 @@
 const ShoppingListEditor = () => {
-    return (
-        <h1>Shopping List Editor</h1>
-    );
+return (
+<div className="layout">
+    <Sidebar/>
+    <div className="content">
+        <h1>Price Search</h1>
+    </div>
+</div>
+);
 };
-export default ShoppingListEditor; 
+export default ShoppingListEditor;
