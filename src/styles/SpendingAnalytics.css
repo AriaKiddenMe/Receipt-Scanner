@@ -1,77 +1,18 @@
+@import "OverallStyle.css";
+
 /* Layout container */
 .layout {
   display: flex;
   min-height: 100vh;
   font-family: Arial, sans-serif;
-  background-color: #f0f2f5; 
-}
-
-/* Sidebar*/
-.sidebar {
-  width: 300px;
-  background: linear-gradient(135deg, #8b4fb3, #e00000, #f7950c, #0028f3);
-  color: white; 
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  box-shadow: 2px 0 6px rgba(0,0,0,0.1);
-}
-
-/* Sidebar title */
-.sidebar-title {
-  font-family: 'Georgia, 'Times New Roman', Times, serif';
-  font-weight: bold;
-  font-size: 2rem;
-  text-align: center;
-  margin-top: 20px;
-  color: white;
-  text-shadow: 0 4px 4px rgba(0,0,0,0.6);
-  margin: 0;
-}
-
-/* Navigation links container */
-.navigation-buttons {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  justify-content: center;
-}
-
-/* Individual links*/
-.navigation-item {
-  text-decoration: none;
-  color: white;
-  padding: 10px 14px;
-  border-radius: 20px;
-  transition: background 0.5s, transform 0.2s;
-  font-weight: 500;
-  font-size: large;
-}
-
-.navigation-item:hover {
-  background-color: rgba(255, 255, 255, 0.2); 
-  transform: translateX(4px);
-}
-
-.navigation-item.active {
-  background-color: rgba(255, 255, 255, 0.3);
-  font-weight: bold;
-}
-
-.navigation-links-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  background-color: var(--recScan-primary-light-color);
 }
 
 /* Main content area */
 .content {
   flex: 1;
   padding: 40px;
-  background-color: #f0f2f5; 
+  background-color: var(--recScan-primary-light-color);
 }
 
 .content h1 {
@@ -119,32 +60,13 @@
   align-items: center;
 }
 
-/* Display Button */
-
-.display-btn {
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: none;
-  background-color: #405de6;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s, transform 0.2s;
-  margin-left: 20px;
-}
-
-.display-btn:hover {
-  background-color: #833ab4;
-  transform: translateY(-2px);
-}
-
 .chart {
   width: 100%;
-  height: 700px; 
+  height: 700px;
   margin-top: 20px;
-  position: relative; 
+  position: relative;
 }
 
 .signout-container {
-  margin-top: auto; 
+  margin-top: auto;
 }

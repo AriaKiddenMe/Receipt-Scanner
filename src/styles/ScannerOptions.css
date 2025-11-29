@@ -1,3 +1,5 @@
+@import "OverallStyle.css";
+
 .receipt-page{
     background-color: lightgray;
     color: #111827;
@@ -10,9 +12,9 @@
 .alternating{
     min-height: 100dvh;
     background-size: cover;
-    background: linear-gradient(135deg, #8b4fb3, #e00000, #f7950c, #0028f3);
+    background: var(--background-image);
     background-attachment: fixed;
-    padding: 24px 0; 
+    padding: 24px 0;
 }
 .alternating .receipt-page{
     background: transparent;
@@ -42,13 +44,13 @@
 .title{
     font-size: 22px;
     font-weight: 600;
-    color: inherit;    
+    color: inherit;
 }
 .form-grid{
     display: grid;
     grid-template-columns: repeat(4, minmax(160px, 1fr));
     gap: 12px;
-    margin-bottom: 12px;    
+    margin-bottom: 12px;
 }
 .toolbar{
     display: flex;
@@ -66,7 +68,7 @@
 .table{
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0;    
+    border-spacing: 0;
 }
 .table-header{
     position: sticky;
@@ -74,7 +76,7 @@
     background: white;
     z-index: 1;
     font-weight: 600;
-    padding: 12px;    
+    padding: 12px;
 }
 .table-tr{
     background: #F2F2F2;
@@ -89,7 +91,7 @@
 }
 .col-item{
     text-align: left;
-    width: max-content;    
+    width: max-content;
 }
 .col-qty{
     text-align: right;
@@ -108,7 +110,7 @@
     width: fit-content;
 }
 .col-remove{
-    text-align: center; 
+    text-align: center;
     width: max-content;
 }
 .table-input_and_select{
@@ -116,7 +118,7 @@
     height: 34px;
     width: 100%;
 }
-.btn-icon{    
+.btn-icon{
    height: 32px;
    padding: 0 10px;
    align-items: center;

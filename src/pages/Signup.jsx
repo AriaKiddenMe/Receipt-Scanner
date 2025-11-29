@@ -24,9 +24,9 @@ const Signup = () => {
             }
         })
         .catch()
-    }        
+    }
     return (
-        <div className="login-container"> 
+        <div className="login-container">
             <div className="image-sidebar">
                 <p>
                     Image sidebar goes here.
@@ -50,7 +50,7 @@ const Signup = () => {
                             id = "fname"
                             name="fname"
                             autoComplete="fname"
-                            onChange={(e) => setFirstName(e.target.value)}                            
+                            onChange={(e) => setFirstName(e.target.value)}
                             />
                         </div>
                         <div className='form-field'>
@@ -88,11 +88,11 @@ const Signup = () => {
                             autoComplete="password"
                             onChange={(e) => setPassword(e.target.value)}
                             />
-                        </div> 
+                        </div>
                         <div className='form-actions'>
                             <div className='form-action'>
                                 <button
-                                    className='submit-btn'
+                                    className='submission-btn submit-btn'
                                     type="submit">
                                     Submit
                                 </button><br/>
@@ -110,4 +110,4 @@ const Signup = () => {
         </div>
     );
 };
-export default Signup; 
+export default Signup;

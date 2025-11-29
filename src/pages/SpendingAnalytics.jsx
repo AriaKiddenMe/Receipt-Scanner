@@ -66,7 +66,7 @@ const SpendingAnalytics = () => {
             To:{" "}
             <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
           </label>
-          <button className="display-btn" onClick={handleDisplay}>Display</button>
+          <button className="submission-btn display-btn" onClick={handleDisplay}>Display</button>
         </div>
 
         {noDataAvailable ? (

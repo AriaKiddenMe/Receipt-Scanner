@@ -1,15 +1,17 @@
+@import "OverallStyle.css";
+
 .login-container {
     display: flex;
     min-height: 100vh;
     font-family: Arial, sans-serif;
-    background-color: #f0f2f5;     
+    background-color: var(--recScan-primary-light-color);
     padding: 0px;
 }
 
 .image-sidebar {
     width: 40%;
-    background: linear-gradient(135deg, #8b4fb3, #e00000, #f7950c, #0028f3);
-    color: white; 
+    background: var(--background-image);
+    color: white;
     padding: 20px;
     display: flex;
     min-height: 100vh;
@@ -23,7 +25,7 @@
     margin:auto;
     flex: 1;
     padding: 40px;
-    background-color: #f0f2f5; 
+    background-color: var(--recScan-primary-light-color);
 }
 
 .introduction p{
@@ -55,14 +57,7 @@
 
 .submit-btn {
     padding: 6px 30px;
-    border-radius: 20px;
     height: 40px;
-    border: none;
-    background-color: #405de6;
-    color: white;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
 }
 
 #error-msg {

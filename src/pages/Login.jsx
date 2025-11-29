@@ -27,9 +27,9 @@ const Login = () => {
             .catch((err) => {
                 console.log("error logging in");
             })
-    }    
+    }
     return (
-        <div className="login-container"> 
+        <div className="login-container">
             <div className="image-sidebar">
                 <p>
                     Image sidebar goes here.
@@ -71,7 +71,7 @@ const Login = () => {
                         <div className='form-actions'>
                             <div className='form-action'>
                                 <button
-                                    className='submit-btn'
+                                    className='submission-btn submit-btn'
                                     type="submit">
                                     Submit
                                 </button><br/>
@@ -89,4 +89,4 @@ const Login = () => {
         </div>
     );
 };
-export default Login; 
+export default Login;

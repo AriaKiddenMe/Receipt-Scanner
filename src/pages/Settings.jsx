@@ -1,9 +1,11 @@
+import Sidebar from "../components/Sidebar";
+
 const Settings = () => {
 return (
 <div className="layout">
     <Sidebar/>
     <div className="content">
-        <h1>Price Search</h1>
+        <h1>Settings</h1>
     </div>
 </div>
 );
