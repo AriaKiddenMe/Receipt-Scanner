@@ -1,7 +1,7 @@
 // This is the backend part of the application that interacts with the Mongo Database,
-// either by pulling in user information (through the signup page) to create a new user account and
-// promptly stores that as a record in the database or pulls up stored user records from the database
-// in which to compare provided user login credentials with (through the login page) to try and find a match. 
+// either by creating and storing or retrieving user records and also by either creating and storing
+// or retrieving receipt records. This also interacts with an Azure Resource: Document Intelligence Form Recognizer,
+// to process scanned files via OCR reads which then returns the data to the front end for futher processing.
 
 const axios = require('axios')
 const contain_multer = require('multer');
@@ -96,6 +96,11 @@ app.get('/getUser', async(req, res) => {
         res.status(500).send(error)
     }
 })
+
+// Enables an uploaded file, a scanned copy of a receipt, to be read and processed by API calls 
+// to an Azure Resource: Document Intelligence Form Recognizer via OCR reads. This in turn extracts textual data from
+// from the file and returns a structured format with that data, which will later be used to parse fields containing
+// data needed to generate a receipt record.   
 app.post('/scanAzureAPI', file_upload.single("scannedReceipt"), async(req, res) => {
     if(!req.file) {
         return res.status(400).send("No file has been uploaded")
@@ -159,6 +164,10 @@ app.post('/scanAzureAPI', file_upload.single("scannedReceipt"), async(req, res) 
     }
     return res.status(200).send({fields: fields_container})
 })
+
+// Generates a receipt record by first funneling data extracted from the fields retrieved from the Azure Resource.
+// Then this data is stored into the appropriate fields of the receipt document. Once the field assignments
+// is complete, the new receipt record is created and stored in the databse.  
 app.post('/generateReceiptRecord', async (req, res) => {
     try {
         const receipt_record = new Receipt({

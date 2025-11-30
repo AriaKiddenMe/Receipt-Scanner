@@ -1,5 +1,6 @@
-// Framework for the document, or format of a user record to be stored in the collection "Users" in
-// the Mongo Database. Has the form fields: f_name for first name, l_name = last name, username, and password.
+// Framework for the document, or format of a user record to be stored in the collection "UserRecords" in
+// the Mongo Database. Has the form fields: f_name for first name, l_name for last name, username, passwordHash for 
+// hashed password, preferred_brands, banned_brands, and allergens.
 
 
 const mongoose = require("mongoose");

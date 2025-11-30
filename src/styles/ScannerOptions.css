@@ -1,5 +1,8 @@
 @import "OverallStyle.css";
 
+/*
+Overall UI layout and design of the Scanner Options page. 
+*/
 .receipt-page{
     background-color: lightgray;
     color: #111827;

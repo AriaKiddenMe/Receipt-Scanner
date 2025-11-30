@@ -3,6 +3,13 @@ import {Link} from "react-router-dom";
 import "../styles/ScannerOptions.css";
 import axios from 'axios'
 import Sidebar from '../components/Sidebar'
+
+// This enables the user to manually input their receipt information in the approriate fields and then fill in a
+// table for their specific items, quantity/weighted, pricing, and discounts. Once complete, they can hit "Manual" to create
+// and store a receipt record in the database for a specific purchase. In addition, they can also upload a
+// a scanned copy of their receipt via [.pdf,.png,.jpeg, and .jpg] file types, then hit "Scan" to create
+// and store a receipt record in the database for a specific purchase. The upload and scan path relies on the Azure Resource
+// to do the OCR reads and return the fields that contain the data needed to generate a receipt record.
 const ScannerOptions = () => {
     const [items, setItems] = useState([])
     const cur_user = localStorage.getItem('user')
