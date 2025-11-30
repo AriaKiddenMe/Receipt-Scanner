@@ -170,7 +170,7 @@ app.post('/generateReceiptRecord', async (req, res) => {
             total_price: req.body.total_price,
             tax_rate: req.body.tax_rate,
             items: req.body.items,
-            //generated_by_user: req.body.generated_by_user,
+            generated_by_user: req.body.generated_by_user,
         })
         await receipt_record.save()
         console.log(`Receipt Record created! ${receipt_record}`)

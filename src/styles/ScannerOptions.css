@@ -176,3 +176,32 @@
 .toolbar button[type="submit"]:hover {
     transform: scale(1.10);
 }
+.scanner-btn {
+    background: #2563eb;
+    color: #fff;
+    transition: transform .15s;
+}
+.scanner-btn:hover{
+    transform: scale(1.10);
+}
+.btn-icon{
+    font-size: 20px;
+}
+.hidden {
+    display: none;
+}
+.upload {
+    display: inline-block;
+    transition: transform .15s;
+    color: #000;
+    background: #d1d5db;
+    font-weight: 500;
+    font-size: 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 999px;
+    padding: 8px 24px;
+}
+.upload:hover {
+    transform: scale(1.10);
+}

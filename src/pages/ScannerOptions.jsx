@@ -2,8 +2,10 @@ import React, {useState, useMemo} from 'react';
 import {Link} from "react-router-dom";
 import "../styles/ScannerOptions.css";
 import axios from 'axios'
+import Sidebar from '../components/Sidebar'
 const ScannerOptions = () => {
     const [items, setItems] = useState([])
+    const cur_user = localStorage.getItem('user')
     function AddItems() {
         var newItems;
         newItems ={Item: "", quantity: 1, price: 0.00, unitType: "qty", type_discount: "percent", discount: 0.00}
@@ -56,7 +58,6 @@ const ScannerOptions = () => {
             new_tr = Number(tax_rate)
         }
         const line_items = items
-        //const current_user = currently_logged_user() 
         const tax_holder = new_tr
         let subt = 0
         line_items.forEach((item) => {
@@ -93,7 +94,7 @@ const ScannerOptions = () => {
             total_price: new_total,
             tax_rate: new_tr,
             items: line_items,
-            //generated_by_user: current_user
+            generated_by_user: cur_user
         }
         try {
             const response = await axios.post('http://localhost:9000/generateReceiptRecord', data_collection)
@@ -235,7 +236,7 @@ const ScannerOptions = () => {
                     total_price: total_price,
                     tax_rate: tax_rate,
                     items: items,
-                    //generated_by_user: current_user
+                    generated_by_user: cur_user
                 }  
                 try {
                     const response_record = await axios.post('http://localhost:9000/generateReceiptRecord', data_collection)
@@ -259,7 +260,9 @@ const ScannerOptions = () => {
         }
     }
     return(
-        <div className="alternating">
+        <div className="layout">
+        <Sidebar/>
+        <div className="content">
         <div className="receipt-page">
             <div className="container">
             <div className="card header">
@@ -269,13 +272,14 @@ const ScannerOptions = () => {
                 <form onSubmit ={handleReceiptSubmission}>
                     <div className="gridding">
                         <div className="fields">
-                            <label className="label">Upload Scanned Receipt:</label>
-                            <input className="input_and_select" type="file" id="scannedReceiptID" name="scannedReceipt" accept=".pdf,.png,.jpeg,.jpg"/>
+                            <span className="label"></span>
+                            <input className="hidden" type="file" id="scannedReceiptID" name="scannedReceipt" accept=".pdf,.png,.jpeg,.jpg"/>
+                            <label htmlFor="scannedReceiptID" className="upload" aria-label="Upload scanned receipt"> Upload a Receipt...⬆️</label>
                         </div>
-                        <button type="button" onClick={handleScan}>Scan</button>
+                        <button type="button" className="scanner-btn" onClick={handleScan}>Scan</button>
                         <div className="fields">
                             <label className="label">Store Name:</label>
-                            <input className="input_and_select" type="text" name="store" placeholder="Name of store (example: Whole Food's)"/>
+                            <input className="input_and_select" type="text" name="store" placeholder="Name of store (example: Whole Foods)"/>
                         </div>
                         <div className="fields">
                             <label className="label">Store Location:</label>
@@ -343,7 +347,7 @@ const ScannerOptions = () => {
                                     <input className="table-input_and_select" type="number" min="0" step="0.01" value={row.discount} onChange={(e)=>update(index, "discount", e.target.value)}/>
                                 </td>
                                 <td className="table-data-cells">
-                                    <button className="btn-icon" type="button" onClick={(e)=>remove_item(index)}>Remove</button>
+                                    <button className="btn-icon" type="button" onClick={(e)=>remove_item(index)} aria-label="Remove item">🗑️</button>
                                 </td>
                             </tr>))}
                         </tbody>
@@ -352,6 +356,7 @@ const ScannerOptions = () => {
                 </form>
             </div>
             </div>
+        </div>
         </div>
         </div>
     );

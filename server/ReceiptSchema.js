@@ -19,7 +19,7 @@ const ReceiptSchema = new mongoose.Schema( {
     total_price: Number,
     tax_rate: Number,
     items: [ItemSchema],
-    //generated_by_user: String,
+    generated_by_user: String,
     generatedTime: {type: Date, default: Date.now},
 });
 const Receipt = mongoose.model("Receipt", ReceiptSchema, "Receipts");
