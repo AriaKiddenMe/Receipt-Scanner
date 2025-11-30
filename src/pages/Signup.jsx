@@ -4,6 +4,9 @@ import axios from 'axios'
 
 import "../styles/Login.css"
 
+//this page is used to create an account.
+//theere is a link to login if the user wants to login
+
 const Signup = () => {
     const[showPass, setShowPass] = useState(false);
     const [f_name, setFirstName] = useState('');
@@ -12,6 +15,8 @@ const Signup = () => {
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
 
+    //if account is created, then redirected to home page
+    //if not, then a red text appears stating it
     const handleSignUp = (event, f_name, l_name, username, password) => {
         event.preventDefault()
         axios.post('http://localhost:9000/createUser', { f_name, l_name, username, password })

@@ -4,6 +4,9 @@ import axios from 'axios'
 
 import "../styles/Login.css"
 
+//this page is used to validate credentials.
+//theere is a link to create an account if one has not been made already
+
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -11,13 +14,17 @@ const Login = () => {
 
     const navigate = useNavigate();
 
+    //if someone goes to this page, then localStorage is cleared (account session removed)
     localStorage.clear();
 
+    //if login is validated, then redirected to home page
+    //if not, then a red text appears stating it.
     const handleLogin = (event, username, password) => {
         event.preventDefault()
         axios.get('http://localhost:9000/getUser', { params: { username, password}})
             .then((res) => {
                 if (res.data) {
+                    //this holds the current account state (browser-specific) 
                     localStorage.setItem('user', username);
                     navigate('/Home');
                 } else {
