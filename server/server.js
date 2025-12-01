@@ -1,4 +1,7 @@
 // This is the backend part of the application that interacts with the Mongo Database,
+// either by pulling in user information (through the signup page) to create a new user account and
+// promptly stores that as a record in the database or pulls up stored user records from the database
+// in which to compare provided user login credentials with (through the login page) to try and find a match.
 // either by creating and storing or retrieving user records and also by either creating and storing
 // or retrieving receipt records. This also interacts with an Azure Resource: Document Intelligence Form Recognizer,
 // to process scanned files via OCR reads which then returns the data to the front end for futher processing.
@@ -10,8 +13,11 @@ const {hashing, verifyHash} = require('./Helpers/Hash')
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const User = require('./UserSchema')
-const Receipt = require('./ReceiptSchema')
+
+const User = require('./schemas/UserSchema');
+const Receipt = require('./schemas/ReceiptSchema');
+const ShoppingList = require('./schemas/ShoppingListSchema');
+
 require('dotenv').config({path:'./.env'});
 const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT;
 const AZURE_DI_KEY = process.env.AZURE_DI_KEY;
@@ -30,7 +36,7 @@ database.on('error', (error) => console.log(error))
 
 database.once('connected', () => console.log('Database Connected'))
 
-// Creates and stores new user accounts in the database while also checking if the provided 
+// Creates and stores new user accounts in the database while also checking if the provided
 // account to be created has a username that's already in use, if so, no account is created.
 app.post('/createUser', async (req, res) => {
     console.log(`SERVER: CREATE USER REQ BODY: ${req.body.username} ${req.body.f_name} ${req.body.l_name}`)
@@ -97,17 +103,17 @@ app.get('/getUser', async(req, res) => {
     }
 })
 
-// Enables an uploaded file, a scanned copy of a receipt, to be read and processed by API calls 
+// Enables an uploaded file, a scanned copy of a receipt, to be read and processed by API calls
 // to an Azure Resource: Document Intelligence Form Recognizer via OCR reads. This in turn extracts textual data from
 // from the file and returns a structured format with that data, which will later be used to parse fields containing
-// data needed to generate a receipt record.   
+// data needed to generate a receipt record.
 app.post('/scanAzureAPI', file_upload.single("scannedReceipt"), async(req, res) => {
     if(!req.file) {
         return res.status(400).send("No file has been uploaded")
     }
     const file_container = req.file.buffer
     const url = AZURE_DI_ENDPOINT + "documentintelligence/documentModels/prebuilt-receipt:analyze?api-version=2024-11-30"
-    let location    
+    let location
     try {
         const response = await axios.post(url, file_container,{
             headers: {
@@ -137,7 +143,7 @@ app.post('/scanAzureAPI', file_upload.single("scannedReceipt"), async(req, res) 
         else if (body.status === "failed") {
             return res.status(502).send("Server-side error")
         }
-        
+
         if(i < 29 ) {
             await new Promise(res => setTimeout(res, 1000))
         }
@@ -159,7 +165,7 @@ app.post('/scanAzureAPI', file_upload.single("scannedReceipt"), async(req, res) 
             fields_container = result.documents[0].fields
         }
         else {
-            return res.status(200).send({fields: null})            
+            return res.status(200).send({fields: null})
         }
     }
     return res.status(200).send({fields: fields_container})
@@ -167,7 +173,7 @@ app.post('/scanAzureAPI', file_upload.single("scannedReceipt"), async(req, res) 
 
 // Generates a receipt record by first funneling data extracted from the fields retrieved from the Azure Resource.
 // Then this data is stored into the appropriate fields of the receipt document. Once the field assignments
-// is complete, the new receipt record is created and stored in the databse.  
+// is complete, the new receipt record is created and stored in the databse.
 app.post('/generateReceiptRecord', async (req, res) => {
     try {
         const receipt_record = new Receipt({
@@ -292,5 +298,3 @@ app.get('/getThisWeeksItems', async (req, res) => {
         res.status(500).send("Server error");
     }
 });
-
-

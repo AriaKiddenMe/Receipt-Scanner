@@ -1,20 +1,5 @@
 @import "OverallStyle.css";
 
-/* Layout container */
-.layout {
-  display: flex;
-  min-height: 100vh;
-  font-family: Arial, sans-serif;
-  background-color: var(--recScan-primary-light-color);
-}
-
-/* Main content area */
-.content {
-  flex: 1;
-  padding: 40px;
-  background-color: var(--recScan-primary-light-color);
-}
-
 .content h1 {
   font-size: 2rem;
  font-family: "Georgia";

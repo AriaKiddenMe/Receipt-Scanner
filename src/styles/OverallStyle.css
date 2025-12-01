@@ -1,6 +1,22 @@
 html {
-  --background-image: linear-gradient(135deg, #8b4fb3, #e00000, #f7950c, #0028f3);
+  --recScan-primary-color: #f7950c;
+  --background-image: linear-gradient(135deg, #8b4fb3, #e00000, var(--recScan-primary-color), #0028f3);
   --recScan-primary-light-color: #f0f2f5;
+}
+
+/* Layout container */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background-color: var(--recScan-primary-light-color);
+}
+
+/* Main content area */
+.content {
+  flex: 1;
+  padding: 40px;
+  background-color: var(--recScan-primary-light-color);
 }
 
 /* Sidebar*/

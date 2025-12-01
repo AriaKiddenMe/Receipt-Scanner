@@ -1,0 +1,72 @@
+@import "OverallStyle.css";
+
+tr.PMOverallLineBox {
+    background:hsl(from var(--recScan-primary-light-color) h s 90%);
+    --PMsize:(180vh);
+    display:inline-flex;
+    padding: 0%;
+    margin:2%;
+    border-radius:1.8vh;
+    min-width:calc(var(--PMsize)*1);
+    width: calc(var(--PMsize)*1);
+    max-width:calc(var(--PMsize)*1);
+    min-height:calc(var(--PMsize)*0.1);
+    height:calc(var(--PMsize)*0.1);
+    max-height:calc(var(--PMsize)*0.1);
+}
+
+.PMElem{
+    margin:0px 0% 0px;
+}
+
+div.PMLabel{
+    min-width: calc(var(--PMsize)*0.7);
+    width: calc(var(--PMsize)*0.7);
+    max-width:calc(var(--PMsize)*0.7);
+    aspect-ratio: 7 / 1;
+    padding-right: 3%;
+    text-align:Right;
+}
+
+button.PMButton, div.PMVal{
+    text-align: center;
+    min-width: calc(var(--PMsize)*0.08);
+    min-height: calc(var(--PMsize)*0.08);
+    width: calc(var(--PMsize)*0.08);
+    height: calc(var(--PMsize)*0.08);
+    max-width:calc(var(--PMsize)*0.08);
+    max-height:calc(var(--PMsize)*0.08);
+    aspect-ratio: 1 / 1;
+    margin:calc(var(--PMsize)*0.01);
+    border-radius:1.2vh;
+    border-style:none;
+    font-size:larger;
+}
+
+button.PMButton{
+    line-height:0px;
+    background-color: rgba(from var(--recScan-primary-color) r g b / 0.8);
+    font-size:calc(var(--PMsize)*0.05);
+}
+
+div.PMVal{
+    padding-top:auto;
+    padding-bottom:auto;
+    background:hsl(from white h s 98%);
+    line-height:calc(var(--PMsize)*0.05) ;
+}
+
+button.collapseHeader {
+    border-style: none;
+}
+
+button.collapseHeader:hover, button.collapseHeader.active{
+    background-color: teal;
+}
+
+.collapsingContent{
+    padding: 13px;
+    display: none;
+    overflow: hidden;
+    background-color:pink
+}
