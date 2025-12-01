@@ -58,6 +58,7 @@
 .submit-btn {
     padding: 6px 30px;
     height: 40px;
+    margin:0px
 }
 
 #error-msg {

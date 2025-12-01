@@ -38,9 +38,6 @@ const Login = () => {
     return (
         <div className="login-container">
             <div className="image-sidebar">
-                <p>
-                    Image sidebar goes here.
-                </p>
             </div>
             <div className="main-content">
                 <div className="introduction">
