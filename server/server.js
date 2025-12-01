@@ -263,24 +263,28 @@ app.get("/getSpendingByItem", async (req, res) => {
 //get the currently logged in user using localStorage, and retrieve all of the items from the last week
 app.get('/getThisWeeksItems', async (req, res) => {
     try {
-        const username = req.user;
+        const username = req.query.user;
         const to = new Date();
-        const from = to.getDate()-7;
+        const from = new Date();
+        from.setDate(to.getDate()-7);
 
         const receipts = await Receipt.find({
-            purchase_date: { $gte: from, $lte: to }//,
-            //generated_by_user: username
+            purchase_date: { $gte: from, $lte: to },
+            generated_by_user: username
         }).lean();
 
-        const thisWeeksItems = {};
+        let thisWeeksItems = [];
         receipts.forEach(r => {
-            thisWeeksItems.concat(r.items);
+            thisWeeksItems.push(r.items);
         });
+        thisWeeksItems = thisWeeksItems.flat(Infinity);
 
         let spentThisWeek = 0;
         thisWeeksItems.forEach(i => {
             spentThisWeek += i.price;
         });
+        console.log(thisWeeksItems);
+        console.log("spent this week: " + spentThisWeek);
 
         res.status(200).send({thisWeeksItems, spentThisWeek});
     } catch (error) {
