@@ -49,7 +49,7 @@ const Login = () => {
                 <div className="form">
                     <form onSubmit={(event) => handleLogin(event, username, password)}>
                         <div className="form-field">
-                            <label htmlFor="username">Username</label><br/>
+                            <label htmlFor="username">Username:</label><br/>
                             <input
                             required
                             type="text"
