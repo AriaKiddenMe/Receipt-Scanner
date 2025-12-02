@@ -6,6 +6,15 @@ import Sidebar from '../components/Sidebar';
 import PMCounter from '../components/PlusMinusNumberBox';
 
 //UNIVERSAL CONSTANTS
+
+// Added By Rheinard to stop error display when launching react app
+const default_distance_search = true
+const default_distance = 10
+const default_distance_unit = "mi"
+const default_transport = "driving"
+const default_max_stores = 10
+const favorite_stores = []
+
 const unit_types = ["mi", "km", "minutes"];
 const transport_types = ["straight line", "driving", "walking", "biking", "public transit"];
 
@@ -29,8 +38,8 @@ function PriceShop() {
                 //res.data = {def_dist, def_dist_unit, def_max_stores, def_transp}
                 if (res.data) {
                     default_distance = (res.data.def_dist);
-                    default_distance_unit = (res.def_dist_unit);
-                    default_max_stores = (res.def_max_stores);
+                    default_distance_unit = (res.data.def_dist_unit);
+                    default_max_stores = (res.data.def_max_stores);
                     default_transport = (res.data.def_transp);
                     favorite_stores=(res.data.fav_stores)
                     //this holds the an object representing the user's default search preferences

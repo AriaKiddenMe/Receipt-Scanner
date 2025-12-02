@@ -320,8 +320,8 @@ app.get('/getThisWeeksItems', async (req, res) => {
         thisWeeksItems = thisWeeksItems.flat(Infinity);
 
         let spentThisWeek = 0;
-        thisWeeksItems.forEach(i => {
-            spentThisWeek += i.price;
+        thisWeeksItems.forEach(i => {        
+            spentThisWeek += (i.price * i.quantity);
         });
         console.log(thisWeeksItems);
         console.log("spent this week: " + spentThisWeek);
