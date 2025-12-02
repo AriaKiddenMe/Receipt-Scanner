@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useNavigate } from 'react';
 
-function PMNumberBox({ initialValue, minValue, maxValue, increment }) {
+function PMCounter({initialValue, minValue, maxValue, increment}) {
+    const [number_value, setNumberValue] = useState(initialValue);
+    const [can_inc, setCanInc] = useState(number_value+increment<=maxValue);
+    const [can_dec, setCanDec] = useState(number_value-increment>=minValue);
     useEffect(() => {
         if (increment > (maxValue - minValue)) {
             console.error("increment cannot be larger than the distance between the maximum number and minimum number");
@@ -10,43 +13,51 @@ function PMNumberBox({ initialValue, minValue, maxValue, increment }) {
             console.error("cannot have an intial value outside the bounds of the minimum and maximum values (inclusive)");
             return <p>inporperlyFormatted</p>
         }
-        if (initialValue == minValue) {document.getElementById("decrementNumberButton").disabled=true;}
-        if (initialValue == maxValue) {document.getElementById("incrementNumberButton").disabled=true;}
+        if (initialValue == minValue) {setCanDec(false)}
+        if (initialValue == maxValue) {setCanInc(false)}
         console.log("initialValue", initialValue, "minValue", minValue, "maxValue", maxValue, "increment", increment);
     }, [initialValue, minValue, maxValue, increment]);
 
-    const [number_value, setNumberValue] = useState(initialValue);
 
     function incrementNumber() {
-        if ((number_value >= minValue) && (number_value < (minValue + increment))) {
-            document.getElementById("decrementNumberButton").disabled=false;
-        }
-        if (number_value + increment <= maxValue) {
-            if ((number_value+increment) >= maxValue) {
-                document.getElementById("incrementNumberButton").disabled=true;
+        if ((number_value + increment) <= maxValue) {
+            if(number_value >= minValue) {setCanDec(true)};
+            if ((number_value+(2*increment)) > maxValue) {
+                setCanInc(false);
             }
             setNumberValue(number_value + increment);
+        } else {
+            if ((number_value-increment) >= minValue) {
+                setCanDec(true);
+            }
         }
     }
 
     function decrementNumber() {
-        if ((number_value <= (maxValue)) && (number_value > (maxValue - increment))) {
-            document.getElementById("incrementNumberButton").disabled=false;
-        };
         if (number_value - increment >= minValue) {
-            if ((number_value-increment) <= minValue) {
-                document.getElementById("decrementNumberButton").disabled=true;
+            if (number_value <= maxValue) { setCanInc(true)};
+            if ((number_value-(2*increment)) < minValue) {
+                setCanDec(false);
             }
             setNumberValue(number_value - increment);
+        } else {
+            if ((number_value+increment) <= maxValue) {
+                setCanInc(true);
+            };
         }
     }
 
+    function updateValue(val){
+        if (val < maxValue && val > minValue) {{setNumberValue(val); setCanInc(true)}; setCanDec(true)}
+        if (val >= maxValue) {setNumberValue(maxValue); setCanInc(false); setCanDec(true)};
+        if (val <= minValue) {setNumberValue(minValue); setCanDec(false); setCanInc(true)};
+    }
+
     return (
-    <tr class="PMOverallLineBox">
-        <div class="PMLabel PMElem">what doing there myu friend? can I help you to the car</div>
-        <button class="PMButton PMElem" id="decrementNumberButton" onClick={decrementNumber}>-</button>
-        <div class="PMVal PMElem">{number_value}</div>
-        <button class="PMButton PMElem" id="incrementNumberButton" onClick={incrementNumber}>+</button>
-    </tr>
+    <div class="PMCounter">
+        <button class="PMButton PMElem" onClick={decrementNumber} disabled={!can_dec}>-</button>
+        <input value={number_value} type="text" onChange={(e) => updateValue(e.target.value)} class="PMVal PMElem"/>
+        <button class="PMButton PMElem" onClick={incrementNumber} disabled={!can_inc}>+</button>
+    </div>
     );
-} export default PMNumberBox;
+} export default PMCounter;

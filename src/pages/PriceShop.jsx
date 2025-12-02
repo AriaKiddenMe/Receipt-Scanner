@@ -3,50 +3,70 @@ import {React, useState, useEffect} from 'react';
 import {useNavigate } from "react-router-dom";
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
-import PMNumberBox from '../components/PlusMinusNumberBox';
+import PMCounter from '../components/PlusMinusNumberBox';
+
+//UNIVERSAL CONSTANTS
+const unit_types = ["mi", "km", "minutes"];
+const transport_types = ["straight line", "driving", "walking", "biking", "public transit"];
 
 function PriceShop() {
-    //UNIVERSAL CONSTANTS
-    const unit_types = ["mi", "km", "minutes"];
-    const transport_types = ["straight line", "driving", "walking", "biking", "public transit"];
-
     //checking if we have a user logged in, otherwise sends to login page
-    // const user = localStorage.getItem('user');
-    // const navigate = useNavigate();
-    // useEffect(() => {
-    //   console.log("user", user);
-    //   if (!user) {
-    //      navigate('/Login');
-    //       return;
-    //    }
-    // }, [user, navigate]);
+    const user = localStorage.getItem('user');
+    const navigate = useNavigate();
+    useEffect(() => {
+      console.log("user", user);
+      if (!user) {
+         navigate('/Login');
+          return;
+       }
+    }, [user, navigate]);
+
+    //USER SPECIFIC DATA fetched from the user preferences in database (default refers to the default for the user)
+    useEffect(() => {
+        let default_distance, default_distance_unit, default_max_stores, default_transport, favorite_stores;
+        axios.get('http://localhost:9000/getUserSearchPreferences', { params: {user}})
+            .then((res) => {
+                //res.data = {def_dist, def_dist_unit, def_max_stores, def_transp}
+                if (res.data) {
+                    default_distance = (res.data.def_dist);
+                    default_distance_unit = (res.def_dist_unit);
+                    default_max_stores = (res.def_max_stores);
+                    default_transport = (res.data.def_transp);
+                    favorite_stores=(res.data.fav_stores)
+                    //this holds the an object representing the user's default search preferences
+                } else {
+                    console.error("program should never end up here (via '/getUserSearchPreferences'). This is here for debugging");
+                }
+            })
+            .catch((err) => {
+                console.log("error requesting user's default search data");
+            }
+        )
+        console.log(default_distance, default_distance_unit, default_max_stores, default_transport, favorite_stores);
+    }, [user])
+
+    const [shopping_lists, setShoppingLists] = useState([""]);
+
 
     // const [user_id, setUser_id] = useState('');
     // const [stores, getStores] = useState(''); //represents all the store entries in the database
 
+
     //BASIC SEARCH info set by users
-    const [distance, setDistance] = useState('');
-    // const [search_by_distance, setSearchByDistance] = useState('');
-    // const [shopping_list_id, setShoppingList] = useState([]);
-    // const [favored_stores_list_id, setStoreID] = useState([]);
+    const [shopping_list_id, setShoppingList] = useState(shopping_lists[0]);
+    const [search_by_distance, setSearchByDistance] = useState(default_distance_search);
+
+    //searchByDistance
+    const [distance, setDistance] = useState(default_distance);
+    //straightLine, driving, walking, biking, publicTransit
+    const [distance_unit, setDistanceUnit] = useState(default_distance_unit);
+    /*can be minutes (except for radialDistance), miles, kilometers*/
+    const [transportation_type, setTransportType] = useState(((distance_unit==="minutes")&&(default_transport==="straight line")) ? transport_types[1] : default_transport);
 
     //ADVANCED SEARCH info set by users
-    // const [max_price_age_days, setMaxPriceAgeDays] = useState();
-    // const [min_stores, setMinStores] = useState(1);
-    // const [max_stores, setMaxStores] = useState(1);
-    /*can be minutes (except for radialDistance), miles, kilometers*/
-    const [distance_measurement_unit, setDistanceMeasurementUnit] = useState('');
-    //straightLine, driving, walking, biking, publicTransit
-    const [transportation_type, setTransportType] = useState('');
-
-    //USER SPECIFIC DATA fetched from the user preferences in database
-    //indicates the preferred units for the user to see in order from most to least preffered
-    // const [default_distance, setDefaultDistance]= useState(Number);
-    const [user_pref_distance_unit, setUserPrefDistanceUnit]= useState('');
-    // const [default_transport, setDefaultTransport] = useState('');
-    // const [unit_preferences_order, setUnitPreferencesOrder] = useState([]); //for shopping list items
-    // const [shopping_lists, setShoppingLists] = useState([]);
-    // const [favored_stores_lists, setFavoredStoresLists] = useState([]);
+    const [max_price_age_in_days, setMaxPriceAgeInDays] = useState(0); //0 is processed to mean any age
+    const [stores_to_calculate, setStoresToCalculate] = useState(10);
+    const [advancedSearchVisibility, setAdvancedSearchVisibility] = useState(false);
 
     /*
     //These are potential FUTURE FEATURES to maybe implement someday
@@ -71,19 +91,18 @@ function PriceShop() {
     // }, [user])
 
     //fetching userPreferences from the database
-
+    //defaultMaxStores (totalMaxStores collected from PMCounter when we hit Search)
 
     //called functions
     function checkValidUnitTransport(){
-        if((distance_measurement_unit==="minutes")&&(transportation_type==="straight line")){
+        if((distance_unit==="minutes")&&(transportation_type==="straight line")){
             console.log("messy")
-            ((user_pref_distance_unit!=="minutes")&&(user_pref_distance_unit!=='')) ? setDistanceMeasurementUnit({user_pref_distance_unit}) : setDistanceMeasurementUnit('mi');
+            ((default_distance_unit!=="minutes")&&(default_distance_unit!=='')) ? setDistanceUnit({user_pref_distance_unit: default_distance_unit}) : setDistanceUnit('mi');
             document.getElementById("minuteOption").disabled=true;
             document.getElementById("mileOption");
         }
     };
 
-    //const toggleCollapsedSettings = (e)=> console.log(e);
     return (
     <div className="layout">
         <Sidebar/>
@@ -97,39 +116,47 @@ function PriceShop() {
                     })
                 }
             </select> */}
-            <input
-                    // placeholder={default_distance}
-                    placeholder={0}
-                    type="text"
-                    value={distance}
-                    onChange={(e) => setDistance(e.target.value)}
-            />
-            <select id="selectUnit" onChange={(e) => {checkValidUnitTransport();setDistanceMeasurementUnit(e.target.value);}} value={distance_measurement_unit.trim}>
-                <option value={unit_types[0].trim} id='mileOption'>
-                    {unit_types[0]}
-                </option>
-                <option value={unit_types[1].trim}>
-                    {unit_types[1]}
-                </option>
-                <option value={unit_types[2].trim} id='minuteOption'>
-                    {unit_types[2]}
-                </option>
-            </select>
-            <select onChange={(e) => {checkValidUnitTransport();setTransportType(e.target.value)}} value={transportation_type.trim}>
-                {transport_types.map((trprtTy, index) =>
-                    <option key={index} value={trprtTy.trim}>
-                        {trprtTy}
-                    </option>
-                    )
-                }
-            </select>
-            {/* <button type="button" class="collapseHeader" onClick={(e) => toggleCollapsedSettings(e.)}>Advanced Settings</button>
-            <div class="collapsingSettingsContent">
-                <p>Lorem ipsum... asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf asdfasdfasdfasdfasdfasdfasdf</p>
-            </div> */}
-            <table>
-                <PMNumberBox initialValue={1} minValue={1} maxValue={7} increment={1}></PMNumberBox>
-            </table>
+            <div class="PrimarySearchParameterBox BoxOfRows">
+                <div>
+                    <b class="distance_label">distance</b>
+                    <input
+                            placeholder={10}
+                            type="text"
+                            value={distance}
+                            onChange={(e) => setDistance(e.target.value)}
+                    />
+                    <select id="selectUnit" onChange={(e) => {checkValidUnitTransport();setDistanceUnit(e.target.value);}} value={distance_unit.trim}>
+                        <option value={unit_types[0].trim} id='mileOption'>
+                            {unit_types[0]}
+                        </option>
+                        <option value={unit_types[1].trim}>
+                            {unit_types[1]}
+                        </option>
+                        <option value={unit_types[2].trim} id='minuteOption'>
+                            {unit_types[2]}
+                        </option>
+                    </select>
+                    <select onChange={(e) => {checkValidUnitTransport();setTransportType(e.target.value)}} value={transportation_type.trim}>
+                        {transport_types.map((trprtTy, index) =>
+                            <option key={index} value={trprtTy.trim}>
+                                {trprtTy}
+                            </option>
+                            )
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="AdvancedSearchParameterBox BoxOfRows">
+                <button class="collapseHeader" onClick={() => setAdvancedSearchVisibility(!advancedSearchVisibility)}><b>Advanced Settings</b></button>
+                <div class="AdvancedSearchContents">
+                    <div class="PMLabel">Stores to Search : </div>
+                    <PMCounter initialValue={stores_to_calculate} minValue={1} maxValue={15} increment={1}></PMCounter>
+                    <div class="PMLabel">Price Age limit (days):</div>
+                    <PMCounter initialValue={max_price_age_in_days} minValue={0} maxValue={3*365} increment={1}/>
+
+                </div>
+            </div>
+            <button class="search"><b>Search</b></button>
         </div>
     </div>
     );

@@ -1,7 +1,10 @@
 html {
-  --recScan-primary-color: #f7950c;
-  --background-image: linear-gradient(135deg, #8b4fb3, #e00000, var(--recScan-primary-color), #0028f3);
+  --recScan-first-color: #8b4fb3;
+  --recScan-second-color: #e00000;
+  --recScan-third-color: #f7950c;
+  --recScan-fourth-color: #0028f3;
   --recScan-primary-light-color: #f0f2f5;
+  --background-image: linear-gradient(135deg, var(--recScan-first-color), var(--recScan-second-color), var(--recScan-third-color), var(--recScan-fourth-color));
 }
 
 /* Layout container */

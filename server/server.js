@@ -265,6 +265,40 @@ app.get("/getSpendingByItem", async (req, res) => {
   }
 });
 
+app.get('/getUserSearchPreferences', async (req, res) => {
+    try{
+        let username = req.query.user;
+        let User = await User.findOne({
+            _id: {UserID}
+        }).lean();
+        let template = {
+            def_dist: 20,
+            def_dist_unit: "mi",
+            def_max_stores: 0,
+            def_transp: "straight line",
+            fav_stores: [""]
+        }
+        const searchParams = User.searchParameters; //TODO what if searchParameters itself is empty
+        if(searchParams){
+            let def_dist = searchParams.default_distance || template.def_dist;
+            let def_dist_unit = searchParams.default_distance_unit || template.def_dist_unit;
+            let def_max_stores = searchParams.default_max_stores || template.def_max_stores;
+            let def_transp = searchParams.default_transport || template.def_transp;
+            let fav_stores = searchParams.user_favorite_stores || template.fav_stores;
+            res.status(200).send({
+                def_dist: {def_dist},
+                def_dist_unit: {def_dist_unit},
+                def_max_stores: {def_max_stores},
+                def_transp: {def_transp},
+                fav_stores: {fav_stores}
+            });
+        } else {res.status(200).send({template})};
+    } catch(error){
+        console.error(error);
+        res.status(500).send("Server Error in requesting User Preferences");
+    }
+})
+
 
 //get the currently logged in user using localStorage, and retrieve all of the items from the last week
 app.get('/getThisWeeksItems', async (req, res) => {

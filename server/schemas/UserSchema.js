@@ -1,5 +1,5 @@
 // Framework for the document, or format of a user record to be stored in the collection "UserRecords" in
-// the Mongo Database. Has the form fields: f_name for first name, l_name for last name, username, passwordHash for 
+// the Mongo Database. Has the form fields: f_name for first name, l_name for last name, username, passwordHash for
 // hashed password, preferred_brands, banned_brands, and allergens.
 
 
@@ -10,8 +10,16 @@ const UserSchema = new mongoose.Schema({
     l_name: String,
     username: String,
     passwordHash: String,
-    preferred_brands: [String], 
-    banned_brands: [String], 
+    searchParameters: {
+        default_distance: Number,
+        default_distance_unit: String,
+        default_max_stores: Number,
+        default_transport: String,
+        user_favorite_stores: [String]
+    },
+    default_item_unit_order: [String],
+    preferred_brands: [String],
+    banned_brands: [String],
     allergens: [String]
 });
 
