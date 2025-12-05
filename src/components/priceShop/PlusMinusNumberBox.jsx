@@ -1,4 +1,4 @@
-import { useEffect, useState, useNavigate } from 'react';
+import { useEffect, useState} from 'react';
 
 function PMCounter({initialValue, minValue, maxValue, increment}) {
     const [number_value, setNumberValue] = useState(initialValue);
@@ -13,9 +13,8 @@ function PMCounter({initialValue, minValue, maxValue, increment}) {
             console.error("cannot have an intial value outside the bounds of the minimum and maximum values (inclusive)");
             return <p>inporperlyFormatted</p>
         }
-        if (initialValue == minValue) {setCanDec(false)}
-        if (initialValue == maxValue) {setCanInc(false)}
-        console.log("initialValue", initialValue, "minValue", minValue, "maxValue", maxValue, "increment", increment);
+        if (initialValue===minValue) {setCanDec(false)}
+        if (initialValue===maxValue) {setCanInc(false)}
     }, [initialValue, minValue, maxValue, increment]);
 
 
@@ -54,10 +53,10 @@ function PMCounter({initialValue, minValue, maxValue, increment}) {
     }
 
     return (
-    <div class="PMCounter">
-        <button class="PMButton PMElem" onClick={decrementNumber} disabled={!can_dec}>-</button>
-        <input value={number_value} type="text" onChange={(e) => updateValue(e.target.value)} class="PMVal PMElem"/>
-        <button class="PMButton PMElem" onClick={incrementNumber} disabled={!can_inc}>+</button>
+    <div className="PMCounter">
+        <button className="PMButton PMElem" onClick={decrementNumber} disabled={!can_dec}>-</button>
+        <input value={number_value} type="text" onChange={(e) => updateValue(e.target.value)} className="PMVal PMElem"/>
+        <button className="PMButton PMElem" onClick={incrementNumber} disabled={!can_inc}>+</button>
     </div>
     );
 } export default PMCounter;

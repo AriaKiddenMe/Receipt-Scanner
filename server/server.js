@@ -276,6 +276,7 @@ app.get('/getUserSearchPreferences', async (req, res) => {
             def_dist_unit: "mi",
             def_max_stores: 0,
             def_transp: "straight line",
+            def_prio_faves: true,
             fav_stores: [""]
         }
         const searchParams = User.searchParameters; //TODO what if searchParameters itself is empty
@@ -284,12 +285,14 @@ app.get('/getUserSearchPreferences', async (req, res) => {
             let def_dist_unit = searchParams.default_distance_unit || template.def_dist_unit;
             let def_max_stores = searchParams.default_max_stores || template.def_max_stores;
             let def_transp = searchParams.default_transport || template.def_transp;
+            let def_prio_favs = searchParams.default_prioritize_favorites || template.def_prio_faves;
             let fav_stores = searchParams.user_favorite_stores || template.fav_stores;
             res.status(200).send({
                 def_dist: {def_dist},
                 def_dist_unit: {def_dist_unit},
                 def_max_stores: {def_max_stores},
                 def_transp: {def_transp},
+                def_prio_faves: {def_prio_faves},
                 fav_stores: {fav_stores}
             });
         } else {res.status(200).send({template})};
@@ -320,7 +323,7 @@ app.get('/getThisWeeksItems', async (req, res) => {
         thisWeeksItems = thisWeeksItems.flat(Infinity);
 
         let spentThisWeek = 0;
-        thisWeeksItems.forEach(i => {        
+        thisWeeksItems.forEach(i => {
             spentThisWeek += (i.price * i.quantity);
         });
         console.log(thisWeeksItems);

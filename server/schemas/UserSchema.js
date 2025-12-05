@@ -15,6 +15,7 @@ const UserSchema = new mongoose.Schema({
         default_distance_unit: String,
         default_max_stores: Number,
         default_transport: String,
+        default_prioritize_favorites: Boolean,
         user_favorite_stores: [String]
     },
     default_item_unit_order: [String],

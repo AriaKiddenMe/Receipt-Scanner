@@ -47,7 +47,7 @@ div.AdvancedSearchContents{
     border-radius:0.3vh 0.3vh 1.5vh 1.5vh;
     padding:3vh 1.5vh 2vh 1.5vh;
     display:grid;
-    grid-template-columns: 1fr 24vh;
+    grid-template-columns: 1fr 20vh;
     grid-row-gap: 3vh;
     grid-column-gap: 0vh;
 }
@@ -95,7 +95,7 @@ button.PMButton:hover, button.PMButton.active{
 }
 
 .PMVal{
-    width:5vh;
+    width:8.5vh;
     background-color: hsl(from var(--recScan-primary-light-color) h s 98%);
     border-radius:0.5vh;
     line-height:3.4vh;
