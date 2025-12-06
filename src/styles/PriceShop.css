@@ -43,6 +43,7 @@ button.collapseHeader:hover, button.collapseHeader.active{
 }
 
 div.AdvancedSearchContents{
+    hidden: true;
     background:hsl(from var(--recScan-primary-light-color) h s 90%);
     border-radius:0.3vh 0.3vh 1.5vh 1.5vh;
     padding:3vh 1.5vh 2vh 1.5vh;
