@@ -49,26 +49,8 @@ function DistanceSelector({distance_val_default, distance_unit_default, distance
     ? distance_unit_default : sys_default_distance_unit);
     const [transportation_type, setTransportType] = useState(
         (transport_types.includes(distance_unit_default)
-        &&((distance_unit_default!=="minutes")||(distance_transport_default!=="straight line")))
+        &&((distance_unit_default!==distance_unit_types[0])||(distance_transport_default!==transport_types[0])))
         ? distance_transport_default : sys_default_transport);
-
-    function checkValidUnitTransportThenUpdate(elementKey, value){
-        if(elementKey==="selectUnit"){
-            if((value==="minutes")){
-                document.getElementByKey("straight lineOption").disabled=true;
-            } else if(distance_unit==="minutes") {
-                document.getElementByKey("straight lineOption").disabled=false;
-            }
-            setDistanceUnit(value);
-        } else if(elementKey==="selectTransport"){
-            if(value==="straight line"){
-                document.getElementByKey("minuteOption").disabled=true;
-            } else if(transportation_type==="straight line") {
-                document.getElementByKey("minuteOption").disabled=false;
-            };
-            setTransportType(value);
-        } else {console.error("we should never end up here, checkValidUnitTransportThenUpdate handed an incorrect element ID");}
-    };
 
     return <div>
         <b className="distance_label">distance</b>
@@ -78,8 +60,8 @@ function DistanceSelector({distance_val_default, distance_unit_default, distance
                 value={distance}
                 onChange={(e) => setDistance(e.target.value)}
         />
-        <select key="selectUnit" onChange={(e) => {checkValidUnitTransportThenUpdate(this.key, e.target.value);}} value={distance_unit}>
-            <option value={distance_unit_types[0]} key='minuteOption'>
+        <select key="selectUnit" onChange={(e) => {setDistanceUnit(e.target.value)}} value={distance_unit}>
+            <option value={distance_unit_types[0]} key='minuteOption' disabled={transportation_type===transport_types[0]}>
                 {distance_unit_types[0]}
             </option>
             <option value={distance_unit_types[1]} key='mileOption'>
@@ -89,19 +71,20 @@ function DistanceSelector({distance_val_default, distance_unit_default, distance
                 {distance_unit_types[2]}
             </option>
         </select>
-        <select key="selectTransport" onChange={(e) => {checkValidUnitTransportThenUpdate(this.key, e.target.value);}} value={transportation_type}>
+        <select key="selectTransport" onChange={(e) => {setTransportType(e.target.value);}} value={transportation_type}>
             {transport_types.map((trprtTy) =>
-                <option key={trprtTy.concat("Option")} value={trprtTy}>
-                    {trprtTy}
-                </option>
-                )
+                (trprtTy===transport_types[0]) ?
+                    <option key={trprtTy.concat("Option")} value={trprtTy} disabled={distance_unit===distance_unit_types[0]}>
+                        {trprtTy}
+                    </option>
+                :
+                    <option key={trprtTy.concat("Option")} value={trprtTy}>
+                        {trprtTy}
+                    </option>
+            )
             }
         </select>
     </div>
-}
-
-function PrioritizeFavoritesCheckBox({default_prioritize_favorites, mod_prior_faves}){
-
 }
 
 function MaxStoresCounter({max_stores_default}){
