@@ -10,7 +10,7 @@ function PMCounter({initialValue, minValue, maxValue, increment}) {
             return <p>inporperlyFormatted</p>
         }
         if (initialValue > maxValue || initialValue < minValue) {
-            console.error("cannot have an intial value outside the bounds of the minimum and maximum values (inclusive)");
+            console.error("cannot have an intial value outside the bounds of the minimum (",minValue,") and maximum (",maxValue,") values (inclusive). Given ",initialValue);
             return <p>inporperlyFormatted</p>
         }
         if (initialValue===minValue) {setCanDec(false)}

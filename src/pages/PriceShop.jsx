@@ -1,12 +1,12 @@
 import '../styles/PriceShop.css';
-import {React, useState, useEffect} from 'react';
+import {React, useState, useEffect, useRef} from 'react';
 import {useNavigate } from "react-router-dom";
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import PMCounter from '../components/priceShop/PlusMinusNumberBox';
-
-const distance_unit_types = ["minutes", "mi", "km"];
-const transport_types = ["straight line", "driving", "walking", "biking", "public transit"];
+import {distance_unit_types, transport_types, sys_default_distance,sys_default_distance_unit,
+    sys_default_max_stores, sys_default_transport, sys_default_prioritize_favorites,
+    sys_default_max_price_age, sys_favorite_stores, max_stores_calculated} from '../constants';
 
 function ShoppingListRow({shoppingLists}){
     const shopping_lists = (
@@ -97,7 +97,7 @@ function MaxStoresCounter({max_stores_default}){
         <div className="PMLabel">Stores to Search : </div>
         <PMCounter initialValue={(((typeof max_stores_default)==="number") && max_stores_default > 0) ?
             max_stores_default:sys_default_max_stores}
-            minValue={1} maxValue={15} increment={1}></PMCounter>
+            minValue={1} maxValue={max_stores_calculated} increment={1}></PMCounter>
     </>
 }
 
@@ -109,14 +109,17 @@ function MaxPriceAgeCounter({age_default}){
 }
 
 //UNIVERSAL CONSTANTS
-const sys_default_distance = 10;
-const sys_default_distance_unit = distance_unit_types[1]; //should never be equal to 'minutes' (index 0)
-const sys_default_max_stores = 5;
-const sys_default_transport = transport_types[1]; //should never be equal to 'straight line' (index 0)
-const sys_default_prioritize_favorites = true;
-const sys_default_max_price_age = 0; //which indicates no limit
-const sys_favorite_stores = [];
 function PriceShop() {
+    //USER SPECIFIC DATA fetched from the user preferences in database (default refers to the default for the user)
+    let default_distance = useRef();
+    let default_distance_unit = useRef();
+    let default_max_stores = useRef();
+    let default_transport = useRef();
+    let default_prioritize_favorites = useRef();
+    let favorite_stores = useRef();
+
+    let shopping_lists = useRef();
+
     //checking if we have a user logged in, otherwise sends to login page
     const user = localStorage.getItem('user');
     const navigate = useNavigate();
@@ -128,52 +131,54 @@ function PriceShop() {
         }
     }, [user, navigate]);
 
-    //USER SPECIFIC DATA fetched from the user preferences in database (default refers to the default for the user)
-    let default_distance, default_distance_unit, default_max_stores, default_transport, default_prioritize_favorites, favorite_stores;
-    useEffect(() => {
-        axios.get('http://localhost:9000/getUserSearchPreferences', { params: {user}})
-            .then((res) => {
-                //res.data = {def_dist, def_dist_unit, def_max_stores, def_transp}
-                if (res.data) {
-                    //res.data holds an object representing the user's default search preferences
-                    //eslint-disable-next-line
-                    default_distance = (res.data.def_dist>=0)? res.data.def_dist : sys_default_distance;
-                    //eslint-disable-next-line
-                    default_distance_unit = distance_unit_types.includes(res.data.def_dist_unit) ? res.data.def_dist_unit : sys_default_distance_unit;
-                    //eslint-disable-next-line
-                    default_max_stores = (res.data.def_max_stores > 0)? res.data.def_max_stores : sys_default_max_stores;
+    //fetching user search preferences from the server
+    const getUserSearchPreferences = () => {
+        axios.get('http://localhost:9000/getUserSearchPreferences', { params: {user}}).then((res) => {
+            console.log("This is the response: ", res);
+            console.log("This is the response.data: ", res.data);
+            if (res.data) {
+                //res.data holds an object representing the user's default search preferences
+                default_distance.current = (res.data.def_dist>=0)? res.data.def_dist : sys_default_distance;
+                default_distance_unit.current = distance_unit_types.includes(res.data.def_dist_unit) ? res.data.def_dist_unit : sys_default_distance_unit;
+                default_max_stores.current = (res.data.def_max_stores < max_stores_calculated && res.data.def_max_stores > 0)? res.data.def_max_stores : sys_default_max_stores;
+                //we cannot have transport equal to minutes if distance unit is equal to straight line
+                default_transport.current = ((transport_types.includes(res.data.def_transp) && (res.data.def_transp!=="straight line" || res.data.def_dist_unit!=="minutes")) ? res.data.def_transp : sys_default_transport);
+                default_prioritize_favorites.current = ((typeof res.data.def_prio_favs)==="boolean")? res.data.def_prio_favs : sys_default_prioritize_favorites;
+                favorite_stores.current = (res.data.fav_stores)? res.data.fav_stores : sys_favorite_stores;
+            }else {
+                console.error("program should never end up here (via '/getUserSearchPreferences'). This is here for debugging");
+            }
+        }).then(getUserShoppingLists()).then(()=>{
+            console.log("and finally these are the resulting values:",
+                "\ndefault_distance:", default_distance, "\ndefault_distance_unit:", default_distance_unit,
+                "\ndefault_max_stores:", default_max_stores, "\ndefault_transport:", default_transport,
+                "\nfavorite_stores:", favorite_stores);
+        })
+        .catch((err) => {
+            console.log("error requesting user's default search data", err);
+        });
 
-                    //we cannot have transport equal to minutes if distance unit is equal to straight line
-                    //eslint-disable-next-line
-                    default_transport = ((transport_types.includes(res.ada.def_transp) && (res.data.def_transp!=="straight line" || res.data.def_dist_unit!=="minutes")) ? res.data.def_transp : sys_default_transport)
-                    //eslint-disable-next-line
-                    default_prioritize_favorites = ((typeof res.data.def_prio_favs)==="boolean")? res.data.def_prio_favs : sys_default_prioritize_favorites;
-                    //eslint-disable-next-line
-                    favorite_stores= (res.data.fav_stores)? res.data.fav_stores : sys_favorite_stores
-                } else {
-                    console.error("program should never end up here (via '/getUserSearchPreferences'). This is here for debugging");
-                }
-            })
-            .catch((err) => {
-                console.log("error requesting user's default search data");
-            });
-        console.log(default_distance, default_distance_unit, default_max_stores, default_transport, favorite_stores);
-    }, [user])
+    };
+    //fetching shoppingLists for user from database
+    const getUserShoppingLists= () =>{
+        axios.get('http://localhost:9000/getUserSearchPreferences', { params: {user}})
+        .then( (res) => {
+            console.log("yet to implement shopping lists")
+            //shopping_lists.current = response.data.lists;
+        }).then(()=>{setIsLoaded(true)}).catch(function (error) {
+            console.log(error);
+        })
+        console.log("Server returned the following Shopping Lists: ");
+        console.log("not implemented");
+    }
+
+    //functions like a constructor, but also updates when user changes
+    useEffect(() => {
+        getUserSearchPreferences();
+    }, [user]);
 
     //ADVANCED SEARCH info set by users
-    const [advancedSearchVisibility, setAdvancedSearchVisibility] = useState(false);
-
     let shoppingLists = ["list1", "list2"];
-    //fetching shoppingLists for user from database
-    // useEffect(() => {
-    //     axios.get('http://localhost:9000/getShoppingLists')
-    //         .then(function (response) {
-    //             setShoppingLists(response.data);
-    //         })
-    //         .catch(function (error) {
-    //             console.log(error);
-    //         })
-    // }, [user])
 
     /*
     //These are potential FUTURE FEATURES to maybe implement someday
@@ -222,25 +227,55 @@ function PriceShop() {
     //     )
     // }
 
-    return (
-    <div className="layout">
-        <Sidebar/>
-        <div className="content">
-            <h1><b>Price Shop</b></h1>
-            <div className="PrimarySearchParameterBox BoxOfRows">
-                <ShoppingListRow shoppingLists={shoppingLists}/>
-                <DistanceSelector distance_val_default={default_distance} distance_unit_default={default_distance_unit} distance_transport_default={default_transport}/>
-            </div>
-            <div className="AdvancedSearchParameterBox BoxOfRows">
-                <button className="collapseHeader" onClick={() => setAdvancedSearchVisibility(!advancedSearchVisibility)}><b>Advanced Settings</b></button>
-                <div className="AdvancedSearchContents">
-                    <PrioritizeFavoritesCheckBox default_prioritize_favorites={default_prioritize_favorites}/>
-                    <MaxStoresCounter max_stores_default={default_max_stores}/>
-                    <MaxPriceAgeCounter age_default={sys_default_max_price_age}/>
+    const [advancedSearchVisible, setAdvancedSearchVisible] = useState(false);
+
+    function toggleAdvancedSearchVisibility(val){
+        setAdvancedSearchVisible(val)
+    }
+
+    const [isLoaded, setIsLoaded] = useState(default_distance.current!=null && default_distance_unit.current!=null&&default_max_stores.current!=null&&default_transport.current!=null&&default_prioritize_favorites.current!=null&&favorite_stores.current!=null)
+
+    useEffect(() => {
+        if(isLoaded) {
+            console.log("page is loaded")
+        } else {
+            console.log("waiting")
+        }
+        setAdvancedSearchVisible(false);
+        }, [isLoaded]);
+
+    const getLoadedPage = () => {
+        return <>
+            <Sidebar />
+            <div className="content">
+                <h1><b>Price Shop</b></h1>
+                <div className="PrimarySearchParameterBox BoxOfRows">
+                    <ShoppingListRow shoppingLists={shoppingLists.current} />
+                    <DistanceSelector distance_val_default={default_distance.current} distance_unit_default={default_distance_unit.current} distance_transport_default={default_transport.current} />
                 </div>
+                <div className="AdvancedSearchParameterBox BoxOfRows">
+                    <button className="collapseHeader" onClick={() => toggleAdvancedSearchVisibility(!advancedSearchVisible)}><b>Advanced Settings</b></button>
+                    <div className="AdvancedSearchContents" id="AdvancedSearchContents" hidden={!advancedSearchVisible}>
+                        <PrioritizeFavoritesCheckBox default_prioritize_favorites={default_prioritize_favorites.current} />
+                        <MaxStoresCounter max_stores_default={default_max_stores.current} />
+                        <MaxPriceAgeCounter age_default={sys_default_max_price_age} />
+                    </div>
+                </div>
+                <button className="search" onClick={submitSearch}><b>Search</b></button>
             </div>
-            <button className="search" onClick={submitSearch}><b>Search</b></button>
-        </div>
-    </div>
-    );
+        </>;
+    }
+
+    if(!isLoaded){
+        console.log("loading because:",
+            "\ndefault_distance:", default_distance, "\ndefault_distance_unit:", default_distance_unit,
+            "\ndefault_max_stores:", default_max_stores, "\ndefault_transport:", default_transport,
+            "\nfavorite_stores:", favorite_stores);
+        return <div className="layout"><h1>LOADING</h1></div>
+    } else {
+        let retVal = <div className="layout">
+            {getLoadedPage()}
+        </div>;
+        return retVal
+    }
 } export default PriceShop;
