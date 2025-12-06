@@ -324,7 +324,7 @@ const ScannerOptions = () => {
                         <thead>
                             <tr>
                                 <th className="table-header col-item" scope="col">Item</th>
-                                <th className="table-header col-qty" scope="col">Qty / lbs</th>
+                                <th className="table-header col-qty" scope="col">Qty/lbs</th>
                                 <th className="table-header col-type" scope="col">Type</th>
                                 <th className="table-header col-price" scope="col">Unit Price</th>
                                 <th className="table-header col-discountType" scope="col">Discount</th>
@@ -353,7 +353,7 @@ const ScannerOptions = () => {
                                     </select>
                                     <input className="table-input_and_select" type="number" min="0" step="0.01" value={row.discount} onChange={(e)=>update(index, "discount", e.target.value)}/>
                                 </td>
-                                <td className="table-data-cells">
+                                <td className="table-data-cells col-remove">
                                     <button className="btn-icon" type="button" onClick={(e)=>remove_item(index)} aria-label="Remove item">🗑️</button>
                                 </td>
                             </tr>))}
