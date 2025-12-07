@@ -493,7 +493,7 @@ app.get('/priceSearch', async (req, res) => {
         //CHECKS: verifying input is within expecations
         if((shoppingListName==="<no lists available>")){ throw ("Server not passed a list")}
         if(!distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport)) {throw("cannot calculate with unknown distance values: "+distanceUnit+", "+transport)}
-        if(distanceUnit===distance_unit_types[0] && transport===transport_types[0]){thow("cannot calculate linear distance in minutes")}
+        if(distanceUnit===distance_unit_types[0] && transport===transport_types[0]){throw("cannot calculate linear distance in minutes")}
         if(typeof priorFaves !== "boolean") {throw "Prioritize favorites must be either \'true\' or \'false\'"}
         if(!Number.isInteger(maxPriceAge) || maxPriceAge<0) {throw("price-age-limit must be a number greater than or equal to 0 (0 indicates no limit). Value: "+maxPriceAge)}
         if(!Number.isInteger(maxStores) || maxStores<1) {throw("max stores must be a whole number greater than 0. Value: "+maxPriceAge)}
