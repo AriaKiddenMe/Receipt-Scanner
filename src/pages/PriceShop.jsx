@@ -139,7 +139,7 @@ function PriceShop() {
                 //we cannot have transport equal to minutes if distance unit is equal to straight line
                 transport.current = ((transport_types.includes(res.data.def_transp) && (res.data.def_transp!=="straight line" || res.data.def_dist_unit!=="minutes")) ? res.data.def_transp : sys_default_transport);
                 prioritize_favorites.current = ((typeof res.data.def_prio_favs)==="boolean")? res.data.def_prio_favs : sys_default_prioritize_favorites;
-                favorite_stores.current = (res.data.fav_stores)? res.data.fav_stores : sys_favorite_stores;
+                favorite_stores.current = (res.data.fav_stores.length!==0) ? res.data.fav_stores : sys_favorite_stores;
             }else {
                 console.error("program should never end up here (via '/getUserSearchPreferences'). This is here for debugging");
             }
@@ -219,7 +219,9 @@ function PriceShop() {
         advancedSettings=advancedSettings.children[1]
         let maxPriceAge = advancedSettings.children[3].children[1].value;
         let maxStores = advancedSettings.children[5].children[1].value;
-        let prioritize_favorites = advancedSettings.children[1].value
+        let prioritize_favorites = advancedSettings.children[1].value;
+        let fav_stores = favorite_stores.current;
+        let fav_stores_length = favorite_stores.current.length;
         console.log("BASIC SETTINGS\n",
             "\nshoppingList:", shoppingList,
             "\ndistance:",distance,
@@ -228,10 +230,11 @@ function PriceShop() {
             "\n\nADVANCED SETTINGS",
             "\nprioritize_favorites:", prioritize_favorites,
             "\nmaxPriceAge:", maxPriceAge,
-            "\nmaxStores:", maxStores);
+            "\nmaxStores:", maxStores,
+            "\nnum_faves", fav_stores_length,
+            "\nfav_stores", fav_stores);
 
-
-        axios.get('http://localhost:9000/priceSearch', { params: {
+        {axios.get('http://localhost:9000/priceSearch', { params: {
             username: user,
             shop_list_id: shoppingList,
             distance: distance,
@@ -240,7 +243,8 @@ function PriceShop() {
             prior_faves: prioritize_favorites,
             max_price_age: maxPriceAge,
             max_stores: maxStores,
-            fav_stores: favorite_stores.current
+            fav_stores_length: fav_stores_length,
+            favorite_stores
         }})
             .then((res) => {
                 //res.data =
@@ -253,6 +257,6 @@ function PriceShop() {
             .catch((err) => {
                 console.log("error requesting user's default search data");
             }
-        )
+        )}
     }
 } export default PriceShop;

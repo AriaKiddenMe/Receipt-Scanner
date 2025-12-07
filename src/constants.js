@@ -7,5 +7,5 @@ export const
     sys_default_transport = transport_types[1], //should never be equal to 'straight line' (index 0)
     sys_default_prioritize_favorites = true,
     sys_default_max_price_age = 0, //which indicates no limit
-    sys_favorite_stores = [],
+    sys_favorite_stores = ["<no favorites given>"],
     max_stores_calculated=15;

@@ -12,7 +12,9 @@ const file_upload = contain_multer();
 const {hashing, verifyHash} = require('./Helpers/Hash')
 const express = require('express');
 const cors = require('cors');
+const url = require("url");
 const app = express();
+const {sys_favorite_stores, distance_unit_types, transport_types} = require('../src/constants');
 
 const User = require('./schemas/UserSchema');
 const Receipt = require('./schemas/ReceiptSchema');
@@ -295,6 +297,136 @@ app.get('/getUserSearchPreferences', async (req, res) => {
                 fav_stores: fav_stores
             });
         } else {res.status(200).send({template})};
+    } catch(error){
+        console.error(error,"\n\n");
+        res.status(500).send(("Server Error in requesting User Search Preferences"+"\n\n"));
+    }
+})
+
+async function processPriceSearchInput(parsedEntries){
+    let usname, shoppingListName, distance,
+    distanceUnit, transport, priorFaves, maxStores, maxPriceAge,
+    favorite_stores, fav_stores_length
+    let arrayName="favorite_stores"
+    let arrayNameLen = arrayName.length
+    let errorMsg = (unknownName, value) => {("input parameter unaccounted for {name: ", unknownName, "; value: ", value,"}")}
+    for(let i = 0; i < parsedEntries.length; i++){
+        let row = parsedEntries[i]
+        switch (row[0]) {
+            case "username":
+                usname = row[1]
+                break;
+            case "shop_list_id":
+                shoppingListName = row[1]
+                break;
+            case "distance":
+                distance = parseInt(row[1])
+                break;
+            case "distance_unit":
+                distanceUnit = row[1]
+                break;
+            case "transport":
+                transport = row[1]
+                break;
+            case "prior_faves":
+                priorFaves = (row[1]=="true")
+                break;
+            case "max_price_age":
+                maxStores = parseInt(row[1])
+                break;
+            case "max_stores":
+                maxPriceAge = parseInt(row[1])
+                break;
+            case "fav_stores_length":
+                fav_stores_length = (parseInt(row[1])>0)? parseInt(row[1]) : 1
+                favorite_stores = Array.from(('?').repeat(fav_stores_length));
+                break;
+            default:
+                if(row[0].length>= arrayNameLen && row[0].substring(0,arrayNameLen)===arrayName){
+                    let indexNamePieces = (row[0].replaceAll("]","[").split("["))
+                    if(Number.parseInt(indexNamePieces[3])===NaN) {
+                        throw errorMsg(row[0],row[1])
+                    }
+                    let indexWithinArray = Number.parseInt(indexNamePieces[3]);
+
+                    if(typeof favorite_stores==="undefined") {
+                        if(parsedEntries.findIndex((val)=>(val.length>=arrayNameLength&&val.substring(0,arrayNameLength)===arrayName))!==-1){
+                            //there are entries, we are just waiting for the thread processing fav_stores_length
+                            while(typeof favorite_stores==="undefined"){await sleep(200)}
+                        }
+                    } else if(indexWithinArray < fav_stores_length){ //don't surpass the original passed array's length
+                            favorite_stores[indexWithinArray] = row[1];
+                    } else {
+                        console.log("are we here, ROW", row, indexWithinArray)
+                        throw (errorMsg(row[0],row[1]))
+                    }
+                }
+                break;
+            }
+    }
+    return {usname, shoppingList: shoppingListName, distance,
+    distanceUnit, transport, priorFaves, maxStores, maxPriceAge,
+    favorite_stores}
+}
+
+app.get('/priceSearch', async (req, res) => {
+    console.log("attempting a price search, given: ")
+    try{
+        let parsedUrl = url.parse(req.url, true);
+        const parsedEntries = Object.entries(parsedUrl.query);
+        console.log(parsedEntries)
+
+        let {usname, shoppingListName, distance, distanceUnit,
+            transport, priorFaves, maxStores, maxPriceAge,
+            favorite_stores} = await processPriceSearchInput(parsedEntries)
+        console.log("usname:", usname, "\nshoppingList:", shoppingListName,
+            "\ndistance:", distance, "\ndistanceUnit:", distanceUnit,
+            "\ntransport:", transport, "\npriorFaves:", priorFaves,
+            "\nmaxPriceAge:", maxPriceAge, "\nmaxStores:", maxStores,
+            "\nfavorite_stores:", favorite_stores);
+
+        //we have processed the input from the user out of the given object
+        //CHECKS: verifying input is within expecations
+        if(!(shoppingListName==="<no lists available>")){ throw ("Server not passed a list")}
+        if(!distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport)) {throw("cannot calculate with unknown distance values: "+distanceUnit+", "+transport)}
+        if(distanceUnit===distance_unit_types[0] && transport===transport_types[0]){thow("cannot calculate linear distance in minutes")}
+        if(typeof priorFaves !== "boolean") {throw "Prioritize favorites must be either \'true\' or \'false\'"}
+        if(!Number.isInteger(maxPriceAge) || maxPriceAge<0) {throw("price-age-limit must be a number greater than or equal to 0 (0 indicates no limit). Value: "+maxPriceAge)}
+        if(!Number.isInteger(maxStores) || maxStores<1) {throw("max stores must be a whole number greater than 0. Value: "+maxPriceAge)}
+        let shopByDistance= !(distance > 0)
+        let haveFavorites= Array.isArray(favorite_stores)&&favorite_stores.length>=1&&(!(favorite_stores.length==1 && favorite_stores[0]==="<no favorites given>"))
+        if(shopByDistance && !haveFavorites) {throw "a search requires a distance and/or a favorite stores list"}
+
+        //GET USER
+        let usrList = await User.find({
+            username: usname
+        }).lean()
+        if(usrList===null){throw "could not find user " + usname + " for PriceSearch"}
+        if(usrList.length > 1){throw "more than one user found with the username: "+usname}\
+        const usr = usrList[0];
+        console.log("user: ", usr)
+
+
+        //GET SHOPPING-LIST
+        let listObjArr = await ShoppingList.find({
+            owner_id: usr._id,
+            list_name: shoppingListName,
+        })
+        if(listArr===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
+        if(listArr.length > 1){throw "more than one list \""+list_name+"\" found for the user "+usname + " during PriceSearch"}
+        const list = listArr[0];
+        console.log("ShoppingList: ", list)
+
+
+        //finding which favorites are in the database
+        
+
+        //now we need to:
+            //request all viable stores based off of available receipt database entries
+            //reduce stores considered using the google maps API as well as the favorite_stores to find viable stores.
+            //  starting with the favorites (if prior_faves) and then continuing (up to maxStores)
+            //return a grid with stores as columns and entries as rows
+        //res.status(200);
     } catch(error){
         console.error(error,"\n\n");
         res.status(500).send(("Server Error in requesting User Search Preferences"+"\n\n"));
