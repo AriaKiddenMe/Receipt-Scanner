@@ -16,7 +16,7 @@ const UserSchema = new mongoose.Schema({
         default_max_stores: Number,
         default_transport: String,
         default_prioritize_favorites: Boolean,
-        user_favorite_stores: [String]
+        user_favorite_stores: [String] //Syntax(via EBNF) STORE_NAME '(' STORE_ADDRESS ')'
     },
     default_item_unit_order: [String],
     preferred_brands: [String],
