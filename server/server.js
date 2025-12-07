@@ -402,7 +402,7 @@ app.get('/priceSearch', async (req, res) => {
             username: usname
         }).lean()
         if(usrList===null){throw "could not find user " + usname + " for PriceSearch"}
-        if(usrList.length > 1){throw "more than one user found with the username: "+usname}\
+        if(usrList.length > 1){throw "more than one user found with the username: "+usname}
         const usr = usrList[0];
         console.log("user: ", usr)
 
@@ -419,7 +419,7 @@ app.get('/priceSearch', async (req, res) => {
 
 
         //finding which favorites are in the database
-        
+
 
         //now we need to:
             //request all viable stores based off of available receipt database entries
