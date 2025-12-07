@@ -1,6 +1,6 @@
 import '../styles/PriceShop.css';
 import {React, useState, useEffect, useRef} from 'react';
-import {useNavigate } from "react-router-dom";
+import {Await, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import PMCounter from '../components/priceShop/PlusMinusNumberBox';
@@ -126,11 +126,22 @@ function PriceShop() {
         }
     }, [user, navigate]);
 
+    const getShoppingLists = async () => {
+        axios.get('http://localhost:9000/getShoppingLists', { params: {user}}).then((resSL) => {
+            shopping_lists.current = resSL.data;
+            console.log("ShoppingLists", resSL.data)
+        }).then(()=>{
+            setIsLoaded(true)
+        }).catch((err)=>{
+            console.log("error requesting user's shopping lists", err);
+        })
+    }
+
     //fetching user search preferences from the server
-    const getUserSearchPreferences = () => {
+    const getUserSearchPreferences = async () => {
         axios.get('http://localhost:9000/getUserSearchPreferences', { params: {user}}).then((res) => {
-            console.log("This is the response: ", res);
-            console.log("This is the response.data: ", res.data);
+            console.log("user preferences request's response.data: ", res.data);
+            getShoppingLists();
             if (res.data) {
                 //res.data holds an object representing the user's default search preferences
                 distance.current = (res.data.def_dist>=0)? res.data.def_dist : sys_default_distance;
@@ -148,12 +159,9 @@ function PriceShop() {
                 "\ndefault_distance:", distance, "\ndefault_distance_unit:", distance_unit,
                 "\ndefault_max_stores:", max_stores, "\ndefault_transport:", transport,
                 "\nfavorite_stores:", favorite_stores);
-            setIsLoaded(true);
-        })
-        .catch((err) => {
-            console.log("error requesting user's default search data", err);
-        });
-
+            }).catch((err) => {
+                console.log("error requesting user's default search data", err);
+            });
     };
 
     useEffect(() => {
@@ -210,7 +218,7 @@ function PriceShop() {
         //basic settings
         let [basicSettings,advancedSettings] =document.getElementById("content").getElementsByClassName("BoxOfRows");
         let [shoppingList, distance] = basicSettings.children
-        shoppingList = shoppingList.children[1].value
+        shoppingList = (shoppingList.children[1].value);
         let distanceUnit = distance.children[2].value;
         let transport = distance.children[3].value;
         distance = distance.children[1].value;
@@ -236,7 +244,7 @@ function PriceShop() {
 
         {axios.get('http://localhost:9000/priceSearch', { params: {
             username: user,
-            shop_list_id: shoppingList,
+            shoppingList: shoppingList,
             distance: distance,
             distance_unit: distanceUnit,
             transport: transport,
@@ -245,8 +253,7 @@ function PriceShop() {
             max_stores: maxStores,
             fav_stores_length: fav_stores_length,
             favorite_stores
-        }})
-            .then((res) => {
+        }}).then((res) => {
                 //res.data =
                 if (res.data) {
                     //this holds the an object representing the user's search results

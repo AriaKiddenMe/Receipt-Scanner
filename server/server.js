@@ -332,7 +332,7 @@ app.get('/getUserSearchPreferences', async (req, res) => {
 async function processPriceSearchInput(parsedEntries){
     let usname, shoppingListName, distance,
     distanceUnit, transport, priorFaves, maxStores, maxPriceAge,
-    favorite_stores, fav_stores_length
+    favorite_store_strings, fav_stores_length
     let arrayName="favorite_stores"
     let arrayNameLen = arrayName.length
     let errorMsg = (unknownName, value) => {("input parameter unaccounted for {name: ", unknownName, "; value: ", value,"}")}
@@ -342,7 +342,7 @@ async function processPriceSearchInput(parsedEntries){
             case "username":
                 usname = row[1]
                 break;
-            case "shop_list_id":
+            case "shoppingList":
                 shoppingListName = row[1]
                 break;
             case "distance":
@@ -365,7 +365,7 @@ async function processPriceSearchInput(parsedEntries){
                 break;
             case "fav_stores_length":
                 fav_stores_length = (parseInt(row[1])>0)? parseInt(row[1]) : 1
-                favorite_stores = Array.from(('?').repeat(fav_stores_length));
+                favorite_store_strings = Array.from(('?').repeat(fav_stores_length));
                 break;
             default:
                 if(row[0].length>= arrayNameLen && row[0].substring(0,arrayNameLen)===arrayName){
@@ -375,13 +375,13 @@ async function processPriceSearchInput(parsedEntries){
                     }
                     let indexWithinArray = Number.parseInt(indexNamePieces[3]);
 
-                    if(typeof favorite_stores==="undefined") {
+                    if(typeof favorite_store_strings==="undefined") {
                         if(parsedEntries.findIndex((val)=>(val.length>=arrayNameLength&&val.substring(0,arrayNameLength)===arrayName))!==-1){
                             //there are entries, we are just waiting for the thread processing fav_stores_length
                             while(typeof favorite_stores==="undefined"){await sleep(200)}
                         }
                     } else if(indexWithinArray < fav_stores_length){ //don't surpass the original passed array's length
-                            favorite_stores[indexWithinArray] = row[1];
+                            favorite_store_strings[indexWithinArray] = row[1];
                     } else {
                         console.log("are we here, ROW", row, indexWithinArray)
                         throw (errorMsg(row[0],row[1]))
@@ -390,9 +390,87 @@ async function processPriceSearchInput(parsedEntries){
                 break;
             }
     }
-    return {usname, shoppingList: shoppingListName, distance,
+    let favorite_stores = favorite_store_strings.map((val)=>{
+        let store_name = val.substring(0, val.indexOf('['))
+        let store_location = val.substring(val.indexOf('[')+1, val.indexOf(']'))
+        return [store_name, store_location]
+    })
+    return {usname, shoppingListName, distance,
     distanceUnit, transport, priorFaves, maxStores, maxPriceAge,
     favorite_stores}
+}
+
+async function getAvailReceipts(usr, maxPriceAge){
+    //NOTE: this would be bad practive for a scaling application, but for our purposes
+    //I am requesting all available receipts that the user has access to.
+    let todayDate = new Date();
+    let oldestDate = (maxPriceAge!=0) ? new Date((todayDate.valueOf() - 1000*60*60*24*maxPriceAge)) : new Date("Jan 1, 1910");
+
+    const usersReceipts = await Receipt.find({
+        purchase_date: { $gte: oldestDate, $lte: todayDate },
+        generated_by_user: usr.username
+    })
+    const publicReceipts = await Receipt.find({
+        purchase_date: { $gte: oldestDate, $lte: todayDate },
+        public: true
+    })
+    console.log("Receipts available: ", usersReceipts.length + publicReceipts.length);
+
+    //updating the accessibility (isPublic) property for each of the urer's receipts that needs it
+    // usersReceipts.foreach((receipt) => {
+    //     if(receipt.public != (usr.receipts_public)){
+    //         let newValue = !(usr.receipts_public)
+    //         //updating the publicity / privacy of user's receipts
+    //         database.collection('Receipts').updateOne(
+    //             {_id: receipt._id}, {$set: {public: (newValue)}}
+    //         )
+    //     }
+    // })
+    return usersReceipts.concat(publicReceipts)
+}
+
+async function getAvailLocations(receipts){
+    let returningArray = new Array();
+    for(let i = 0; i < receipts.length; i++){
+        let loc = [receipts[i].store_name, receipts[i].store_location]
+        if(returningArray.length==0){
+            returningArray.push(loc);
+        }
+        for(let j = 0; j < returningArray.length; j++){
+            let existingEntry = returningArray[j]
+            if(!(existingEntry[0]===loc[0]&&existingEntry[1]===loc[1])){
+                returningArray.push(loc);
+            }
+        }
+    }
+    return returningArray
+}
+
+async function insertFavorites(availLocations, fav_stores){
+    //finding which favorites are in the database
+    let ordermap = new Int32Array(availLocations.length)
+    let foundFaves = new Int32Array(fav_stores.length)
+
+    for(let i = 0; i < fav_stores.length; i++){
+        console.log("i=",i)
+        let currentFav = fav_stores[i]
+        for(j=0;j<availLocations.length; j++){
+            console.log("j=",j)
+            potFav = availLocations[j]
+            if(potFav[0]===currentFav[0]&&potFav[1]===currentFav[1]){
+                ordermap[j]=i+1
+                foundFaves[i] = true;
+                console.log("found a fav")
+                break;
+            }
+        }
+    }
+    console.log("favorites map:", ordermap," for ", availLocations)
+    console.log("missing-favorites map:", foundFaves," for ", fav_stores)
+
+    let favLocations = []
+    let otherLocations = []
+    return [favLocations, otherLocations]
 }
 
 app.get('/priceSearch', async (req, res) => {
@@ -409,43 +487,54 @@ app.get('/priceSearch', async (req, res) => {
             "\ndistance:", distance, "\ndistanceUnit:", distanceUnit,
             "\ntransport:", transport, "\npriorFaves:", priorFaves,
             "\nmaxPriceAge:", maxPriceAge, "\nmaxStores:", maxStores,
-            "\nfavorite_stores:", favorite_stores);
+            "\nfavorite_stores:", favorite_stores,"\n\n\n");
 
         //we have processed the input from the user out of the given object
         //CHECKS: verifying input is within expecations
-        if(!(shoppingListName==="<no lists available>")){ throw ("Server not passed a list")}
+        if((shoppingListName==="<no lists available>")){ throw ("Server not passed a list")}
         if(!distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport)) {throw("cannot calculate with unknown distance values: "+distanceUnit+", "+transport)}
         if(distanceUnit===distance_unit_types[0] && transport===transport_types[0]){thow("cannot calculate linear distance in minutes")}
         if(typeof priorFaves !== "boolean") {throw "Prioritize favorites must be either \'true\' or \'false\'"}
         if(!Number.isInteger(maxPriceAge) || maxPriceAge<0) {throw("price-age-limit must be a number greater than or equal to 0 (0 indicates no limit). Value: "+maxPriceAge)}
         if(!Number.isInteger(maxStores) || maxStores<1) {throw("max stores must be a whole number greater than 0. Value: "+maxPriceAge)}
+
         let shopByDistance= !(distance > 0)
         let haveFavorites= Array.isArray(favorite_stores)&&favorite_stores.length>=1&&(!(favorite_stores.length==1 && favorite_stores[0]==="<no favorites given>"))
         if(shopByDistance && !haveFavorites) {throw "a search requires a distance and/or a favorite stores list"}
 
         //GET USER
-        let usrList = await User.find({
+        const usr = await User.findOne({
             username: usname
         }).lean()
-        if(usrList===null){throw "could not find user " + usname + " for PriceSearch"}
-        if(usrList.length > 1){throw "more than one user found with the username: "+usname}
-        const usr = usrList[0];
-        console.log("user: ", usr)
-
+        //if(usrList===null){throw "could not find user " + usname + " for PriceSearch"}
+        //if(usrList.length > 1){throw "more than one user found with the username: "+usname}
+        //const usr = usrList;//[0];
+        console.log("user: ", usr.username)
 
         //GET SHOPPING-LIST
-        let listObjArr = await ShoppingList.find({
+//        let listArr = await ShoppingList.find({
+        const list = await ShoppingList.find({
             owner_id: usr._id,
             list_name: shoppingListName,
         })
-        if(listArr===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
-        if(listArr.length > 1){throw "more than one list \""+list_name+"\" found for the user "+usname + " during PriceSearch"}
-        const list = listArr[0];
+        if(list===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
+        // if(listArr===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
+        //if((listArr).isArray&&listArr.length > 1){throw "more than one list \""+list_name+"\" found for the user "+usname + " during PriceSearch"}
+        // const list = listArr[0];
         console.log("ShoppingList: ", list)
+        console.log("\titemOne: ", list.listItems)
 
+        //GET RECEIPTS
+        const avail_receipts = await getAvailReceipts(usr, maxPriceAge)
+        if(avail_receipts.length==0){ throw "there are no receipts available to this user"}
 
-        //finding which favorites are in the database
+        //GET ALL AVAILABLE LOCATIONS
+        const available_locations = await getAvailLocations(avail_receipts)
+        console.log("available_locations: ", available_locations)
 
+        //INSERT FAVORITES
+        let [locationsToSearch, otherLocations] = (haveFavorites) ? await insertFavorites(available_locations, favorite_stores) : [[],available_locations]
+        console.log("locationsToSearch: ", locationsToSearch, " otherLocations: ", otherLocations)
 
         //now we need to:
             //request all viable stores based off of available receipt database entries
@@ -460,8 +549,20 @@ app.get('/priceSearch', async (req, res) => {
 })
 
 app.get('/getShoppingLists', async (req,res) =>{
-    console.log("unimplemented")
-    res.status(500).send("unimplemented")
+    console.log("getting user's shopping lists")
+    try{
+        const usname = req.query.user;
+        const user = await User.findOne({username: usname},);
+        let usrID = user._id
+        let shoppingLists = await ShoppingList.find({
+            owner_id: usrID
+        })
+        const shoppingListNames = shoppingLists.map((val)=> {return val.list_name})
+        res.status(200).send(shoppingListNames)
+    } catch {
+        console.error(error,"\n\n");
+        res.status(500).send(("Server Error in requesting User Search Preferences"+"\n\n"));
+    }
 })
 
 //get the currently logged in user using localStorage, and retrieve all of the items from the last week

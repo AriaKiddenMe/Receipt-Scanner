@@ -21,7 +21,8 @@ const UserSchema = new mongoose.Schema({
     default_item_unit_order: [String],
     preferred_brands: [String],
     banned_brands: [String],
-    allergens: [String]
+    allergens: [String],
+    receipts_public: Boolean
 });
 
 const User = mongoose.model("User", UserSchema, "UserRecords");

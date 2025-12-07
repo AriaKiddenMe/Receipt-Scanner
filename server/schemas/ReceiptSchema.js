@@ -11,7 +11,7 @@ const ItemSchema = new mongoose.Schema({
     price: Number,
     unitType: {type: String, enum: ["qty", "lb"], default: "qty"},
     type_discount: String,
-    discount: Number,}, 
+    discount: Number,},
     {_id: false}
 );
 
@@ -26,7 +26,7 @@ const ReceiptSchema = new mongoose.Schema( {
     items: [ItemSchema],
     generated_by_user: String,
     generatedTime: {type: Date, default: Date.now},
+    public: Boolean
 });
 const Receipt = mongoose.model("Receipt", ReceiptSchema, "Receipts");
 module.exports = Receipt;
-
