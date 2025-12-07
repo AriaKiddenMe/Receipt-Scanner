@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import "../styles/ShoppingListEditor.css";
+import axios from "axios";
 
 const ShoppingListEditor = () => {
   const [lists, setLists] = useState([]);
   const [newListName, setNewListName] = useState("");
-  const [itemDrafts, setItemDrafts] = useState({}); 
+  const [itemDrafts, setItemDrafts] = useState({});
 
   useEffect(() => {
     try {
@@ -43,6 +44,85 @@ const ShoppingListEditor = () => {
 
     setLists((prev) => [...prev, newList]);
     setNewListName("");
+  };
+
+  const handleImportFromReceipt = async () => {
+    try {
+      const curUser = localStorage.getItem("user");
+      if (!curUser) {
+        alert("No logged-in user found. Please log in first.");
+        return;
+      }
+
+      const response = await axios.get(
+        "http://localhost:9000/getLatestReceiptForUser",
+        { params: { user: curUser } }
+      );
+
+      if (response.status !== 200 || !response.data) {
+        alert("Could not load the latest receipt.");
+        return;
+      }
+
+      const receipt = response.data;
+
+      const storeName = receipt.store_name || "Imported Receipt";
+      const dateRaw = receipt.purchase_date;
+      let datePart = "";
+
+      if (dateRaw) {
+        try {
+          const d = new Date(dateRaw);
+          if (!isNaN(d.getTime())) {
+            datePart = d.toLocaleDateString();
+          }
+        } catch {
+        }
+      }
+
+      const listName = datePart
+        ? `${storeName} - ${datePart}`
+        : `${storeName} (Imported)`;
+
+      const itemsRaw = receipt.items || [];
+      if (!Array.isArray(itemsRaw) || itemsRaw.length === 0) {
+        alert("The latest receipt has no items to import.");
+        return;
+      }
+
+      const mappedItems = itemsRaw.map((it) => {
+        const name = it.Item || "Unnamed item";
+        const qty = it.quantity != null ? it.quantity.toString() : "1";
+        const price =
+          it.price != null ? Number(it.price) : null;
+        const unitType = it.unitType || "qty"; 
+
+        return {
+          id: createId(),
+          name,
+          brand: "",
+          qty,
+          price,
+          unitType
+        };
+      });
+
+      const newList = {
+        id: createId(),
+        name: listName,
+        items: mappedItems
+      };
+
+      setLists((prev) => [...prev, newList]);
+      alert(`Imported ${mappedItems.length} item(s) from the latest receipt.`);
+    } catch (err) {
+      console.error("Error importing receipt into shopping list", err);
+      if (err.response && err.response.status === 404) {
+        alert("No receipts found for this user.");
+      } else {
+        alert("There was a problem importing the receipt data.");
+      }
+    }
   };
 
   const handleDraftChange = (listId, field, value) => {
@@ -116,7 +196,7 @@ const ShoppingListEditor = () => {
         <div className="shopping-wrapper">
           <h1>Shopping Lists</h1>
 
-          {/* Create new list */}
+          {/* Create new list and import button */}
           <section className="list-creator">
             <h2>Create a new list</h2>
             <div className="list-creator-row">
@@ -129,10 +209,17 @@ const ShoppingListEditor = () => {
               <button type="button" onClick={handleCreateList}>
                 Create List
               </button>
+              <button
+                type="button"
+                className="import-button"
+                onClick={handleImportFromReceipt}
+              >
+                Import from latest receipt
+              </button>
             </div>
           </section>
 
-          {/* Existing lists */}
+          {/* All lists */}
           <div className="lists-grid">
             {lists.length === 0 && (
               <p className="no-lists-message">
@@ -197,7 +284,7 @@ const ShoppingListEditor = () => {
                         <input
                           type="number"
                           min="1"
-                          placeholder="0"
+                          placeholder="1"
                           value={draft.qty}
                           onChange={(e) =>
                             handleDraftChange(list.id, "qty", e.target.value)
@@ -231,13 +318,23 @@ const ShoppingListEditor = () => {
                             {item.brand && (
                               <span className="item-brand">
                                 • {item.brand}
-                              </span>
+                                </span>
                             )}
                           </div>
                           <div className="item-meta">
                             <span className="item-qty">
                               Qty: <strong>{item.qty}</strong>
                             </span>
+                            {item.unitType && (
+                              <span className="item-unit">
+                                ({item.unitType === "lb" ? "lbs" : "qty"})
+                              </span>
+                            )}
+                            {item.price != null && (
+                              <span className="item-price">
+                                Price: ${Number(item.price).toFixed(2)}
+                              </span>
+                            )}
                             <button
                               type="button"
                               className="item-delete"

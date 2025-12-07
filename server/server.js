@@ -267,6 +267,32 @@ app.get("/getSpendingByItem", async (req, res) => {
   }
 });
 
+// Get most recent receipt created
+// Used to get recipt so that user can edit it as a shopping list
+app.get('/getLatestReceiptForUser', async (req, res) => {
+    try {
+        const username = req.query.user;
+        if (!username) {
+            return res.status(400).send("user is required");
+        }
+
+        const latestReceipt = await Receipt.findOne({
+            generated_by_user: username
+        })
+        .sort({ purchase_date: -1, generatedTime: -1 })
+        .lean();
+
+        if (!latestReceipt) {
+            return res.status(404).send("No receipts found for this user");
+        }
+
+        res.status(200).send(latestReceipt);
+    } catch (error) {
+        console.error("Error in /getLatestReceiptForUser:", error);
+        res.status(500).send("Server error");
+    }
+});
+
 app.get('/getUserSearchPreferences', async (req, res) => {
     console.log("getting user search preferences")
     try{
