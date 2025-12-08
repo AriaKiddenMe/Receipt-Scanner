@@ -9,41 +9,62 @@ const Settings = () => {
   const [bannedInput, setBannedInput] = useState("");
   const [allergenInput, setAllergenInput] = useState("");
 
-  const [preferredList, setPreferredList] = useState([]);
-  const [bannedList, setBannedList] = useState([]);
-  const [allergenList, setAllergenList] = useState([]);
+  const [preferredList, setPreferredList] = useState(() => {
+    try {
+      const stored = localStorage.getItem("settings_preferredList");
+      return stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      console.error("Error reading preferredList from localStorage", err);
+      return [];
+    }
+  });
 
-  const [radius, setRadius] = useState(10);
-  const [privacyEnabled, setPrivacyEnabled] = useState(false);
+  const [bannedList, setBannedList] = useState(() => {
+    try {
+      const stored = localStorage.getItem("settings_bannedList");
+      return stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      console.error("Error reading bannedList from localStorage", err);
+      return [];
+    }
+  });
+
+  const [allergenList, setAllergenList] = useState(() => {
+    try {
+      const stored = localStorage.getItem("settings_allergenList");
+      return stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      console.error("Error reading allergenList from localStorage", err);
+      return [];
+    }
+  });
+
+  const [radius, setRadius] = useState(() => {
+    try {
+      const stored = localStorage.getItem("settings_radius");
+      if (!stored) return 10;
+      const num = Number(stored);
+      return Number.isNaN(num) ? 10 : num;
+    } catch (err) {
+      console.error("Error reading radius from localStorage", err);
+      return 10;
+    }
+  });
+
+  const [privacyEnabled, setPrivacyEnabled] = useState(() => {
+    try {
+      const stored = localStorage.getItem("settings_privacyEnabled");
+      if (stored == null) return false;
+      return stored === "true";
+    } catch (err) {
+      console.error("Error reading privacyEnabled from localStorage", err);
+      return false;
+    }
+  });
 
   const toggleSection = (name) => {
     setExpanded((prev) => (prev === name ? null : name));
   };
-
-  useEffect(() => {
-    try {
-      const storedPreferred = localStorage.getItem("settings_preferredList");
-      const storedBanned = localStorage.getItem("settings_bannedList");
-      const storedAllergens = localStorage.getItem("settings_allergenList");
-      const storedRadius = localStorage.getItem("settings_radius");
-      const storedPrivacy = localStorage.getItem("settings_privacyEnabled");
-
-      if (storedPreferred) setPreferredList(JSON.parse(storedPreferred));
-      if (storedBanned) setBannedList(JSON.parse(storedBanned));
-      if (storedAllergens) setAllergenList(JSON.parse(storedAllergens));
-
-      if (storedRadius) {
-        const num = Number(storedRadius);
-        if (!Number.isNaN(num)) setRadius(num);
-      }
-
-      if (storedPrivacy != null) {
-        setPrivacyEnabled(storedPrivacy === "true");
-      }
-    } catch (err) {
-      console.error("Error loading settings", err);
-    }
-  }, []);
 
   useEffect(() => {
     try {
@@ -80,14 +101,6 @@ const Settings = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem("settings_radius", String(radius));
-    } catch (err) {
-      console.error("Error saving radius", err);
-    }
-  }, [radius]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem(
         "settings_privacyEnabled",
         privacyEnabled ? "true" : "false"
@@ -96,6 +109,14 @@ const Settings = () => {
       console.error("Error saving privacyEnabled", err);
     }
   }, [privacyEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("settings_radius", String(radius));
+    } catch (err) {
+      console.error("Error saving radius", err);
+    }
+  }, [radius]);
 
   const addItem = (type) => {
     const map = {
@@ -169,7 +190,7 @@ const Settings = () => {
           {/* Privacy */}
           <section
             className={
-              "settings-section" +
+              "settings-section" + 
               (expanded === "privacy" ? " expanded" : "")
             }
           >
@@ -197,7 +218,7 @@ const Settings = () => {
                 <div className="settings-row">
                   <span className="privacy-label">
                     Set account data private
-                  </span>
+                    </span>
                   <div className="toggle-wrapper">
                     <span className="toggle-label">
                       {privacyEnabled ? "On" : "Off"}
@@ -206,7 +227,7 @@ const Settings = () => {
                       <input
                         type="checkbox"
                         checked={privacyEnabled}
-                        onChange={(e) =>
+                        onChange={(e) => 
                           setPrivacyEnabled(e.target.checked)
                         }
                       />
@@ -221,7 +242,7 @@ const Settings = () => {
           {/* Preferred Brands */}
           <section
             className={
-              "settings-section" +
+              "settings-section" + 
               (expanded === "preferred" ? " expanded" : "")
             }
           >
@@ -290,7 +311,7 @@ const Settings = () => {
           <section
             className={
               "settings-section" +
-              (expanded === "banned" ? " expanded" : "")
+               (expanded === "banned" ? " expanded" : "")
             }
           >
             <button
@@ -385,7 +406,7 @@ const Settings = () => {
                 <div className="list-input-row">
                   <input
                     type="text"
-                    placeholder="Add an allergen (e.g., peanuts, gluten, ect.)..."
+                    placeholder="Add an allergen (e.g., peanuts, gluten, etc.)..."
                     value={allergenInput}
                     onChange={(e) => setAllergenInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -425,7 +446,7 @@ const Settings = () => {
           {/* Store Radius */}
           <section
             className={
-              "settings-section" +
+              "settings-section" + 
               (expanded === "radius" ? " expanded" : "")
             }
           >
@@ -486,3 +507,77 @@ const Settings = () => {
 };
 
 export default Settings;
+
+
+
+
+
+//For PriceShop integration
+//
+//The Settings page now stores user filters in MongoDB under
+//
+//preferred_brands: [String]
+//banned_brands:    [String]
+//banned_allergens: [String]
+//privacy_flag:     Boolean
+//
+//I already added the backend to server.js
+//under:
+//   getUserFilterSettings
+//   updateUserFilterSettings
+//     
+//
+//      //For PriceShop Filtering:
+
+//  export async function fetchUserFilterSettings(username) {
+//    const res = await axios.get("http://localhost:9000/getUserFilterSettings", {
+//      params: { user: username },
+//    });
+//    return res.data || {
+//      preferred_brands: [],
+//      banned_brands: [],
+//      banned_allergens: [],
+//      privacy_flag: false,
+//    };
+//  }
+//
+//      //filtering grocery results for displaying:
+//
+//  export function filterItemsByUserSettings(items, filterSettings) {
+//    const bannedBrands = (filterSettings.banned_brands || []).map((b) =>
+//      b.toLowerCase()
+//    );
+//    const bannedAllergens = (filterSettings.banned_allergens || []).map((a) =>
+//      a.toLowerCase()
+//    );
+//
+//    return (items || []).filter((item) => {
+//      const brand = (item.brand || "").toLowerCase();
+//      const name = (item.name || "").toLowerCase();
+//
+//      const isBannedBrand =
+//        brand &&
+//        bannedBrands.some((banned) => brand.includes(banned));
+//
+//      if (isBannedBrand) return false;
+//
+//      let hasBannedAllergen = false;
+//
+//      if (Array.isArray(item.allergens)) {
+//        const allergensLower = item.allergens.map((a) => a.toLowerCase());
+//        hasBannedAllergen = bannedAllergens.some((banned) =>
+//          allergensLower.some((a) => a.includes(banned))
+//        );
+//      }
+//
+//      if (!hasBannedAllergen && bannedAllergens.length > 0) {
+//        hasBannedAllergen = bannedAllergens.some((banned) =>
+//          name.includes(banned)
+//        );
+//      }
+//
+//      if (hasBannedAllergen) return false;
+//
+//      return true;
+//    });
+//  }

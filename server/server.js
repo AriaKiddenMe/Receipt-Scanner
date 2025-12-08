@@ -293,6 +293,82 @@ app.get('/getLatestReceiptForUser', async (req, res) => {
     }
 });
 
+// Load Settings filters for user
+app.get("/getUserFilterSettings", async (req, res) => {
+  try {
+    const username = req.query.user;
+    if (!username) {
+      return res.status(400).send("user is required");
+    }
+
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    const sp = user.searchParameters || {};
+
+    res.status(200).send({
+      preferred_brands: sp.preferred_brands || [],
+      banned_brands: sp.banned_brands || [],
+      banned_allergens: sp.banned_allergens || [],
+      privacy_flag: !!sp.privacy_flag,
+    });
+  } catch (err) {
+    console.error("Error in /getUserFilterSettings", err);
+    res.status(500).send("Server error");
+  }
+});
+
+// Save Settings filters entered in settings tab for the user
+app.post("/updateUserFilterSettings", async (req, res) => {
+  try {
+    const {
+      user: username,
+      preferred_brands,
+      banned_brands,
+      banned_allergens,
+      privacy_flag,
+    } = req.body;
+
+    if (!username) {
+      return res.status(400).send("user is required");
+    }
+
+    const toStringArray = (val) =>
+      Array.isArray(val)
+        ? val.map((v) => String(v).trim()).filter(Boolean)
+        : [];
+
+    const preferred = toStringArray(preferred_brands);
+    const banned = toStringArray(banned_brands);
+    const allergens = toStringArray(banned_allergens);
+    const privacy = !!privacy_flag;
+
+    const update = {
+      "searchParameters.preferred_brands": preferred,
+      "searchParameters.banned_brands": banned,
+      "searchParameters.banned_allergens": allergens,
+      "searchParameters.privacy_flag": privacy,
+    };
+
+    const updatedUser = await User.findOneAndUpdate(
+      { username },
+      { $set: update },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).send("User not found");
+    }
+
+    res.status(200).send({ success: true });
+  } catch (err) {
+    console.error("Error in /updateUserFilterSettings", err);
+    res.status(500).send("Server error");
+  }
+});
+
 app.get('/getUserSearchPreferences', async (req, res) => {
     console.log("getting user search preferences")
     try{
