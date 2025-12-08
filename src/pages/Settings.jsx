@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import "../styles/Settings.css";
+import axios from "axios";
 
 const Settings = () => {
   const [expanded, setExpanded] = useState(null);
@@ -62,9 +63,65 @@ const Settings = () => {
     }
   });
 
+  const [loadedFromServer, setLoadedFromServer] = useState(false);
+
   const toggleSection = (name) => {
     setExpanded((prev) => (prev === name ? null : name));
   };
+
+  useEffect(() => {
+    const user = localStorage.getItem("user");
+    if (!user) {
+      console.warn("User not logged in, only using localStorage.");
+      setLoadedFromServer(true);
+      return;
+    }
+
+    const fetchFromServer = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:9000/getUserFilterSettings",
+          { params: { user } }
+        );
+
+        const data = res.data || {};
+        setPreferredList(data.preferred_brands || []);
+        setBannedList(data.banned_brands || []);
+        setAllergenList(data.banned_allergens || []);
+        setPrivacyEnabled(!!data.privacy_flag);
+        try {
+          localStorage.setItem(
+            "settings_preferredList",
+            JSON.stringify(data.preferred_brands || [])
+          );
+          localStorage.setItem(
+            "settings_bannedList",
+            JSON.stringify(data.banned_brands || [])
+          );
+          localStorage.setItem(
+            "settings_allergenList",
+            JSON.stringify(data.banned_allergens || [])
+          );
+          localStorage.setItem(
+            "settings_privacyEnabled",
+            data.privacy_flag ? "true" : "false"
+          );
+        } catch (lsErr) {
+          console.error("Error caching settings to localStorage", lsErr);
+        }
+
+        setLoadedFromServer(true);
+      } catch (err) {
+        console.error(
+          "Error loading settings from server, falling back to localStorage",
+          err
+        );
+        setLoadedFromServer(true);
+      }
+    };
+
+    fetchFromServer();
+  }, []);
 
   useEffect(() => {
     try {
@@ -117,6 +174,29 @@ const Settings = () => {
       console.error("Error saving radius", err);
     }
   }, [radius]);
+
+
+  useEffect(() => {
+    if (!loadedFromServer) return;
+
+    const user = localStorage.getItem("user");
+    if (!user) return;
+
+    const info = {
+      user,
+      preferred_brands: preferredList,
+      banned_brands: bannedList,
+      banned_allergens: allergenList,
+      privacy_flag: privacyEnabled,
+    };
+
+    axios
+      .post("http://localhost:9000/updateUserFilterSettings", info)
+      .catch((err) => {
+        console.error("Error saving user settings to server", err);
+      });
+  }, [preferredList, bannedList, allergenList, privacyEnabled, loadedFromServer]);
+
 
   const addItem = (type) => {
     const map = {
@@ -190,7 +270,7 @@ const Settings = () => {
           {/* Privacy */}
           <section
             className={
-              "settings-section" + 
+              "settings-section" +
               (expanded === "privacy" ? " expanded" : "")
             }
           >
@@ -218,7 +298,7 @@ const Settings = () => {
                 <div className="settings-row">
                   <span className="privacy-label">
                     Set account data private
-                    </span>
+                  </span>
                   <div className="toggle-wrapper">
                     <span className="toggle-label">
                       {privacyEnabled ? "On" : "Off"}
@@ -227,7 +307,7 @@ const Settings = () => {
                       <input
                         type="checkbox"
                         checked={privacyEnabled}
-                        onChange={(e) => 
+                        onChange={(e) =>
                           setPrivacyEnabled(e.target.checked)
                         }
                       />
@@ -242,7 +322,7 @@ const Settings = () => {
           {/* Preferred Brands */}
           <section
             className={
-              "settings-section" + 
+              "settings-section" +
               (expanded === "preferred" ? " expanded" : "")
             }
           >
@@ -311,7 +391,7 @@ const Settings = () => {
           <section
             className={
               "settings-section" +
-               (expanded === "banned" ? " expanded" : "")
+              (expanded === "banned" ? " expanded" : "")
             }
           >
             <button
@@ -446,7 +526,7 @@ const Settings = () => {
           {/* Store Radius */}
           <section
             className={
-              "settings-section" + 
+              "settings-section" +
               (expanded === "radius" ? " expanded" : "")
             }
           >

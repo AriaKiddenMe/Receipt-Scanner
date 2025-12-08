@@ -369,6 +369,91 @@ app.post("/updateUserFilterSettings", async (req, res) => {
   }
 });
 
+//Gets settings for user
+app.get("/getUserSettings", async (req, res) => {
+  try {
+    const username = req.query.user;
+    if (!username) {
+      return res.status(400).send("user is required");
+    }
+
+    const user = await User.findOne({ username }).lean();
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    const sp = user.searchParameters || {};
+    const preferredList = sp.preferred_brands || [];
+    const bannedList = sp.banned_brands || [];
+    const allergenList = sp.banned_allergens || [];
+    const radius = typeof sp.default_distance === "number" ? sp.default_distance : 10;
+    const privacyEnabled = !!sp.privacy_flag;
+
+    res.status(200).send({
+      preferredList,
+      bannedList,
+      allergenList,
+      radius,
+      privacyEnabled,
+    });
+  } catch (err) {
+    console.error("Error in /getUserSettings", err);
+    res.status(500).send("Server error");
+  }
+});
+
+// Updates settings for user
+app.post("/updateUserSettings", async (req, res) => {
+  try {
+    const {
+      user: username,
+      preferredList,
+      bannedList,
+      allergenList,
+      radius,
+      privacyEnabled,
+    } = req.body;
+
+    if (!username) {
+      return res.status(400).send("user is required");
+    }
+
+    const toStringArray = (val) =>
+      Array.isArray(val)
+        ? val.map((v) => String(v).trim()).filter(Boolean)
+        : [];
+
+    const preferred = toStringArray(preferredList);
+    const banned = toStringArray(bannedList);
+    const allergens = toStringArray(allergenList);
+    const r = typeof radius === "number" ? radius : 10;
+    const privacy = !!privacyEnabled;
+
+    const update = {
+      "searchParameters.preferred_brands": preferred,
+      "searchParameters.banned_brands": banned,
+      "searchParameters.banned_allergens": allergens,
+      "searchParameters.default_distance": r,
+      "searchParameters.privacy_flag": privacy,
+    };
+
+    const updatedUser = await User.findOneAndUpdate(
+      { username },
+      { $set: update },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).send("User not found");
+    }
+
+    res.status(200).send({ success: true });
+  } catch (err) {
+    console.error("Error in /updateUserSettings", err);
+    res.status(500).send("Server error");
+  }
+});
+
 app.get('/getUserSearchPreferences', async (req, res) => {
     console.log("getting user search preferences")
     try{
