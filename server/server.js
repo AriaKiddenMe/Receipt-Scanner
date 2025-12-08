@@ -790,7 +790,8 @@ function insertFavorites(availLocations, fav_stores, maxStores){
 }
 
 function filterLocationsByDistance(locations, maxLocations, currentLocation, distance, distanceUnit, transport){
-    if(locations.length <= 0 && maxLocations <= 0) return [];
+    // Needs to return a tuple
+    if(locations.length <= 0 && maxLocations <= 0) return [[], []];
     //verifying input
     if(distance <= 0 || !distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport))
         {throw "invalid input to filter Locations By Distance"}
@@ -806,7 +807,7 @@ function filterLocationsByDistance(locations, maxLocations, currentLocation, dis
         if(locMissingGeoLocation(loc)){
             needsDatabaseUpdating.push(updateLocation(loc))
         }
-    }).then(()=>{
+    }).then(async ()=>{
         let locsInRangeByCrow = filterByCrowDistances(locations, currLocLonLat, distance, distanceUnit, transport)
             if(usingGoogleMaps){ //change conditional to googleAPI is present
                 return [];
@@ -819,8 +820,9 @@ function filterLocationsByDistance(locations, maxLocations, currentLocation, dis
             }
         }).then((val)=>{
             currLoc = val[0]
-            distByTrip =
-            console.log(locsInRangeByCrow)
+            distByTrip = val[1]
+            // Maybe out of scope?
+            //console.log(locsInRangeByCrow)
             let applicableDistances
 
             const compareLocationsByDistance = (locOne, locTwo) => {
@@ -830,14 +832,10 @@ function filterLocationsByDistance(locations, maxLocations, currentLocation, dis
             applicableDistances.sort(compareLocationsByDistance(locA,locB))
             //shrink to maxLocations
             if(applicableDistances.length > maxLocations){
-                applicableDistances.length == maxLocations
+                applicableDistances.length = maxLocations
             }
-            return[applicableDistances, needsDatabaseUpdating]}
-
-        )
-
-    })
-
+            return[applicableDistances, needsDatabaseUpdating];
+    });
 }
 
 const earthRadiusMi = 3963; //miles

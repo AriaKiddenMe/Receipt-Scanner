@@ -1,7 +1,7 @@
 // Framework for the document, or format of a receipt record to be stored in the collection "Receipts" in
 // the Mongo Database. Has the form fields: store_name, store_location, store_phone, purchase_date, purchase_time,
-// total_price, tax_rate, items, generated_by_user, and generatedTime. With items holding an item array, its format
-// for each item being Item, quantity, price, unitType, type_discount, and discount.
+// total_price, tax_rate, items, generated_by_user, generatedTime, store_geolocation and a privacy flag. With items holding an item array, its format
+// for each item being Item, quantity, price, unitType, type_discount, and discount. 
 
 const mongoose = require("mongoose")
 
