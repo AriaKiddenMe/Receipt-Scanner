@@ -14,7 +14,11 @@ const express = require('express');
 const cors = require('cors');
 const url = require("url");
 const app = express();
-const {sys_favorite_stores, distance_unit_types, transport_types} = require('../src/constants');
+const {sys_favorite_stores, distance_unit_types, transport_types,
+    lat_lon_defaults, oneDegreelatitudeEstMi, oneDegreelongitudeEstMi,
+    oneDegreelatitudeEstkm, oneDegreelongitudeEstkm
+} = require('../src/constants');
+const kmPerMi = 1.60934;
 
 const User = require('./schemas/UserSchema');
 const Receipt = require('./schemas/ReceiptSchema');
@@ -23,6 +27,10 @@ const ShoppingList = require('./schemas/ShoppingListSchema');
 require('dotenv').config({path:'./.env'});
 const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT;
 const AZURE_DI_KEY = process.env.AZURE_DI_KEY;
+const usingGoogleMaps = false;
+const usingGeoapify = true;
+const GEOAPIFY_ENDPOINT = process.env.GEOAPIFY_ENDPOINT;
+const GEOAPIFY_KEY = process.env.GEOAPIFY_KEY;
 app.use(express.json());
 app.use(cors())
 app.listen(9000, ()=> {
@@ -464,7 +472,7 @@ app.get('/getUserSearchPreferences', async (req, res) => {
             def_dist: 20,
             def_dist_unit: "mi",
             def_max_stores: 0,
-            def_transp: "straight line",
+            def_transp: transport_types[0],
             def_prio_faves: true,
             fav_stores: [""]
         }
@@ -490,10 +498,95 @@ app.get('/getUserSearchPreferences', async (req, res) => {
     }
 })
 
+app.get('/priceSearch', async (req, res) => {
+    console.log("attempting a price search, given: ")
+    try{
+        let parsedUrl = url.parse(req.url, true);
+        const parsedEntries = Object.entries(parsedUrl.query);
+        console.log(parsedEntries)
+
+        let {usname, shoppingListName, currentLocation, distance, distanceUnit,
+            transport, priorFaves, maxStores, maxPriceAge,
+            favorite_stores} = await processPriceSearchInput(parsedEntries)
+
+        //we have processed the input from the user out of the given object
+        //CHECKS: verifying input is within expecations
+        if((shoppingListName==="<no lists available>")){ throw ("Server not passed a list")}
+        if(!distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport)) {throw("cannot calculate with unknown distance values: "+distanceUnit+", "+transport)}
+        if(distanceUnit===distance_unit_types[0] && transport===transport_types[0]){thow("cannot calculate linear distance in minutes")}
+        if(typeof priorFaves !== "boolean") {throw "Prioritize favorites must be either \'true\' or \'false\'"}
+        if(!Number.isInteger(maxPriceAge) || maxPriceAge<0) {throw("price-age-limit must be a number greater than or equal to 0 (0 indicates no limit). Value: "+maxPriceAge)}
+        if(!Number.isInteger(maxStores) || maxStores<1) {throw("max stores must be a whole number greater than 0. Value: "+maxPriceAge)}
+
+        console.log("usname:", usname, "\nshoppingList:", shoppingListName,
+            "\ncurrentLocation:", currentLocation, "\ndistance:", distance,
+            "\ndistanceUnit:", distanceUnit, "\ntransport:", transport,
+            "\npriorFaves:", priorFaves, "\nmaxPriceAge:", maxPriceAge,
+            "\nmaxStores:", maxStores, "\nfavorite_stores:", favorite_stores,"\n\n\n");
+
+        let shopByDistance= !(distance > 0)
+        let haveFavorites= Array.isArray(favorite_stores)&&favorite_stores.length>=1&&(!(favorite_stores.length==1 && favorite_stores[0]==="<no favorites given>"))
+        if(shopByDistance && !haveFavorites) {throw "a search requires a distance and/or a favorite stores list"}
+
+        //GET USER
+        const usr = await User.findOne({
+            username: usname
+        }).lean()
+        //if(usrList===null){throw "could not find user " + usname + " for PriceSearch"}
+        //if(usrList.length > 1){throw "more than one user found with the username: "+usname}
+        //const usr = usrList;//[0];
+        console.log("user: ", usr.username)
+
+        //GET SHOPPING-LIST
+//        let listArr = await ShoppingList.find({
+        const list = await ShoppingList.find({
+            owner_id: usr._id,
+            list_name: shoppingListName,
+        })
+        if(list===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
+        // if(listArr===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
+        //if((listArr).isArray&&listArr.length > 1){throw "more than one list \""+list_name+"\" found for the user "+usname + " during PriceSearch"}
+        // const list = listArr[0];
+        console.log("ShoppingList: ", list.list_name)
+        console.log("\titems: ", await list.listItems)
+
+        //GET RECEIPTS
+        const avail_receipts = await getAvailReceipts(usr, maxPriceAge)
+        if(avail_receipts.length==0){ throw "there are no receipts available to this user"}
+
+        //GET ALL AVAILABLE LOCATIONS
+        //request all viable stores based off of available receipt database entries
+        const available_locations = getAvailLocations(avail_receipts)
+
+        //INSERT FAVORITES (in-order)
+        //inserts favorites into the stores being searched. NOTE: favorites are not discounted by distance
+        let [availFavorites, remainingAvailLocations, missingFavorites] = await insertFavorites(available_locations, favorite_stores, maxStores);
+        console.log("\nlocationsLoaded (so far): ", availFavorites, "\nremaining potential locations:\n", remainingAvailLocations)
+
+        //FIND BY DISTANCE reduce remaining stores considered using a maps API to find viable stores.
+        const [locationsByDistance, locationsNeedingUpdating] = await filterLocationsByDistance(remainingAvailLocations, (maxStores - availFavorites.length),
+            currentLocation, distance, distanceUnit, transport);
+        const locationsBeingSearched = availFavorites.concat(locationsByDistance);
+        console.log("locationsBeingSearched: ", locationsBeingSearched);
+        updateDatabaseForList(locationsNeedingUpdating);
+
+        //we will link all the receipts to their respective locations
+        const storePrices = await attachApplicableReceipts(avail_receipts, locationsBeingSearched)
+        console.log("store prices:", storePrices)
+        //now we need to return a grid with stores as columns and entries as rows
+        //we must get the
+        //[listItemNames, data] = get;
+        res.status(200).send("not quite done yet");
+    } catch(error){
+        console.error(error,"\n\n");
+        res.status(500).send(("Server Error in requesting User Search Preferences"+"\n\n"));
+    }
+})
+
 async function processPriceSearchInput(parsedEntries){
     let usname, shoppingListName, distance,
     distanceUnit, transport, priorFaves, maxStores, maxPriceAge,
-    favorite_store_strings, fav_stores_length
+    favorite_store_strings, currentLocation, fav_stores_length
     let arrayName="favorite_stores"
     let arrayNameLen = arrayName.length
     let errorMsg = (unknownName, value) => {("input parameter unaccounted for {name: ", unknownName, "; value: ", value,"}")}
@@ -506,6 +599,8 @@ async function processPriceSearchInput(parsedEntries){
             case "shoppingList":
                 shoppingListName = row[1]
                 break;
+            case "currentLocation":
+                currentLocation = row[1]
             case "distance":
                 distance = parseInt(row[1])
                 break;
@@ -519,10 +614,10 @@ async function processPriceSearchInput(parsedEntries){
                 priorFaves = (row[1]=="true")
                 break;
             case "max_price_age":
-                maxStores = parseInt(row[1])
+                maxPriceAge = parseInt(row[1])
                 break;
             case "max_stores":
-                maxPriceAge = parseInt(row[1])
+                maxStores = parseInt(row[1])
                 break;
             case "fav_stores_length":
                 fav_stores_length = (parseInt(row[1])>0)? parseInt(row[1]) : 1
@@ -556,7 +651,7 @@ async function processPriceSearchInput(parsedEntries){
         let store_location = val.substring(val.indexOf('[')+1, val.indexOf(']'))
         return [store_name, store_location]
     })
-    return {usname, shoppingListName, distance,
+    return {usname, shoppingListName, currentLocation, distance,
     distanceUnit, transport, priorFaves, maxStores, maxPriceAge,
     favorite_stores}
 }
@@ -569,12 +664,19 @@ async function getAvailReceipts(usr, maxPriceAge){
 
     const usersReceipts = await Receipt.find({
         purchase_date: { $gte: oldestDate, $lte: todayDate },
-        generated_by_user: usr.username
+        generated_by_user: usr.username,
+        store_name: {$ne: ""},
+        store_location: {$ne: ""}
+        //$or: [  {public: {$exists: false}},  {public: false}  ]
     })
     const publicReceipts = await Receipt.find({
         purchase_date: { $gte: oldestDate, $lte: todayDate },
+        store_name: {$ne: ""},
+        store_location: {$ne: ""},
         public: true
+        // $or: [  {public: {$exists: false}},  {public: true}  ]
     })
+
     console.log("Receipts available: ", usersReceipts.length + publicReceipts.length);
 
     //updating the accessibility (isPublic) property for each of the urer's receipts that needs it
@@ -590,16 +692,53 @@ async function getAvailReceipts(usr, maxPriceAge){
     return usersReceipts.concat(publicReceipts)
 }
 
-async function getAvailLocations(receipts){
+//I'm not familiar enough with mongoDB to know which will filter out the unset values
+const locMissingGeoLocation = (val) => {(val==null)||(val.store_geolocation==null)
+    ||(val.store_geolocation.lon==null)||(val.store_geolocation.lat==null)
+    ||(val.store_geolocation.lon==lat_lon_defaults)||(val.store_geolocation.lat==lat_lon_defaults)}
+
+const simplifyStr = (str) => {
+    return ((((((((""+str).toLowerCase()).replaceAll(
+        ",","")).replaceAll(".","")).replaceAll(
+            " ","")).replaceAll("\n","")).trim()))
+}
+
+const compareLoc_NameLatLon = (locOne, locTwo) => {
+    return (simplifyStr(locOne[0])===simplifyStr(locTwo[0])&&locOne[2]===locTwo[2]&&locOne[3]===locTwo[3])
+}
+
+const compareLoc_NameString = (locOne,locTwo) => {
+    return (simplifyStr(locOne[0])===simplifyStr(locTwo[0])&&simplifyStr(locOne[1])===simplifyStr(locTwo[1]))
+}
+
+function getAvailLocations(receipts){
     let returningArray = new Array();
     for(let i = 0; i < receipts.length; i++){
-        let loc = [receipts[i].store_name, receipts[i].store_location]
+        let loc
+        let locGeoBool = locMissingGeoLocation(receipts[i])
+        if(locGeoBool){
+            loc = [receipts[i].store_name, receipts[i].store_location]
+        } else {
+            loc = [receipts[i].store_name, receipts[i].store_location,
+            receipts[i].store_geolocation.lon, receipts[i].store_geolocation.lat]
+        }
         if(returningArray.length==0){
             returningArray.push(loc);
-        }
-        for(let j = 0; j < returningArray.length; j++){
-            let existingEntry = returningArray[j]
-            if(!(existingEntry[0]===loc[0]&&existingEntry[1]===loc[1])){
+        } else {
+            let alreadyAdded = false
+            for(let j = 0; j < returningArray.length; j++){
+                let existingEntry = returningArray[j]
+                if(loc.length==4&&existingEntry.length==4){
+                    if(compareLoc_NameLatLon(loc, existingEntry)){
+                        alreadyAdded = true
+                    }
+                } else {
+                    if(compareLoc_NameString(loc, existingEntry)){
+                        alreadyAdded = true
+                    }
+                }
+            }
+            if(!alreadyAdded){
                 returningArray.push(loc);
             }
         }
@@ -607,109 +746,226 @@ async function getAvailLocations(receipts){
     return returningArray
 }
 
-async function insertFavorites(availLocations, fav_stores){
+function insertFavorites(availLocations, fav_stores, maxStores){
+    if(fav_stores.length == 0) return [[], availLocations]
     //finding which favorites are in the database
-    let ordermap = new Int32Array(availLocations.length)
-    let foundFaves = new Int32Array(fav_stores.length)
-
-    for(let i = 0; i < fav_stores.length; i++){
-        console.log("i=",i)
+    let ordermapAvailLocations = new Int32Array(availLocations.length)
+    let foundFavesMapFavStores = new Int32Array(fav_stores.length)
+    //creating a map of the locations of the favorites, by order, and noting which favorites are not found
+    for(let i = 0; (i < fav_stores.length && i < maxStores); i++){
         let currentFav = fav_stores[i]
         for(j=0;j<availLocations.length; j++){
-            console.log("j=",j)
             potFav = availLocations[j]
             if(potFav[0]===currentFav[0]&&potFav[1]===currentFav[1]){
-                ordermap[j]=i+1
-                foundFaves[i] = true;
-                console.log("found a fav")
+                ordermapAvailLocations[j]=i+1
+                foundFavesMapFavStores[i]++;
                 break;
             }
         }
     }
-    console.log("favorites map:", ordermap," for ", availLocations)
-    console.log("missing-favorites map:", foundFaves," for ", fav_stores)
+    let favLocations = new Array()
+    let otherLocations = new Array()
+    let missingFavorites = new Array()
+    for(let f = 0; (f < foundFavesMapFavStores.length && f < maxStores) ; f++){
+        if(foundFavesMapFavStores[f]==0){
+            missingFavorites.push(fav_stores[f])
+        } else //when 1, we found it once, which is ideal
+        if(foundFavesMapFavStores[f]==2){
+            throw "availLocations contains non-unique values"
+        }
+    }
+    for(let a = 0; a < ordermapAvailLocations.length; a++){
+        if(ordermapAvailLocations[a]==0){
+            //regular unassigned location
+            otherLocations.push(availLocations[a])
+        } else if(ordermapAvailLocations[a] > 0){
+            favLocations[ordermapAvailLocations[a]-1] = availLocations[a]
+        } else {
+            console.log ("somehow the index of the typedArray is not 0 or a number greater")
+            throw "somehow the index of the typedArray is not 0 or a number greater"
+        }
+    }
 
-    let favLocations = []
-    let otherLocations = []
-    return [favLocations, otherLocations]
+    return [favLocations, otherLocations, missingFavorites]
 }
 
-app.get('/priceSearch', async (req, res) => {
-    console.log("attempting a price search, given: ")
-    try{
-        let parsedUrl = url.parse(req.url, true);
-        const parsedEntries = Object.entries(parsedUrl.query);
-        console.log(parsedEntries)
+function filterLocationsByDistance(locations, maxLocations, currentLocation, distance, distanceUnit, transport){
+    if(locations.length <= 0 && maxLocations <= 0) return [];
+    //verifying input
+    if(distance <= 0 || !distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport))
+        {throw "invalid input to filter Locations By Distance"}
 
-        let {usname, shoppingListName, distance, distanceUnit,
-            transport, priorFaves, maxStores, maxPriceAge,
-            favorite_stores} = await processPriceSearchInput(parsedEntries)
-        console.log("usname:", usname, "\nshoppingList:", shoppingListName,
-            "\ndistance:", distance, "\ndistanceUnit:", distanceUnit,
-            "\ntransport:", transport, "\npriorFaves:", priorFaves,
-            "\nmaxPriceAge:", maxPriceAge, "\nmaxStores:", maxStores,
-            "\nfavorite_stores:", favorite_stores,"\n\n\n");
-
-        //we have processed the input from the user out of the given object
-        //CHECKS: verifying input is within expecations
-        if((shoppingListName==="<no lists available>")){ throw ("Server not passed a list")}
-        if(!distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport)) {throw("cannot calculate with unknown distance values: "+distanceUnit+", "+transport)}
-        if(distanceUnit===distance_unit_types[0] && transport===transport_types[0]){throw("cannot calculate linear distance in minutes")}
-        if(typeof priorFaves !== "boolean") {throw "Prioritize favorites must be either \'true\' or \'false\'"}
-        if(!Number.isInteger(maxPriceAge) || maxPriceAge<0) {throw("price-age-limit must be a number greater than or equal to 0 (0 indicates no limit). Value: "+maxPriceAge)}
-        if(!Number.isInteger(maxStores) || maxStores<1) {throw("max stores must be a whole number greater than 0. Value: "+maxPriceAge)}
-
-        let shopByDistance= !(distance > 0)
-        let haveFavorites= Array.isArray(favorite_stores)&&favorite_stores.length>=1&&(!(favorite_stores.length==1 && favorite_stores[0]==="<no favorites given>"))
-        if(shopByDistance && !haveFavorites) {throw "a search requires a distance and/or a favorite stores list"}
-
-        //GET USER
-        const usr = await User.findOne({
-            username: usname
-        }).lean()
-        //if(usrList===null){throw "could not find user " + usname + " for PriceSearch"}
-        //if(usrList.length > 1){throw "more than one user found with the username: "+usname}
-        //const usr = usrList;//[0];
-        console.log("user: ", usr.username)
-
-        //GET SHOPPING-LIST
-//        let listArr = await ShoppingList.find({
-        const list = await ShoppingList.find({
-            owner_id: usr._id,
-            list_name: shoppingListName,
-        })
-        if(list===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
-        // if(listArr===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
-        //if((listArr).isArray&&listArr.length > 1){throw "more than one list \""+list_name+"\" found for the user "+usname + " during PriceSearch"}
-        // const list = listArr[0];
-        console.log("ShoppingList: ", list)
-        console.log("\titemOne: ", list.listItems)
-
-        //GET RECEIPTS
-        const avail_receipts = await getAvailReceipts(usr, maxPriceAge)
-        if(avail_receipts.length==0){ throw "there are no receipts available to this user"}
-
-        //GET ALL AVAILABLE LOCATIONS
-        const available_locations = await getAvailLocations(avail_receipts)
-        console.log("available_locations: ", available_locations)
-
-        //INSERT FAVORITES
-        let [locationsToSearch, otherLocations] = (haveFavorites) ? await insertFavorites(available_locations, favorite_stores) : [[],available_locations]
-        console.log("locationsToSearch: ", locationsToSearch, " otherLocations: ", otherLocations)
-
-        //now we need to:
-            //request all viable stores based off of available receipt database entries
-            //reduce stores considered using the google maps API as well as the favorite_stores to find viable stores.
-            //  starting with the favorites (if prior_faves) and then continuing (up to maxStores)
-            //return a grid with stores as columns and entries as rows
-        //res.status(200);
-    } catch(error){
-        console.error(error,"\n\n");
-        res.status(500).send(("Server Error in requesting User Search Preferences"+"\n\n"));
+    let needsDatabaseUpdating = new Array()
+    updateLocation = async (loc) => {
+        results = getGeoCode(loc[0],loc[1])
+        loc[2] = await results[0]
+        loc[3] = await results[1]
+        return loc
     }
-})
+    locations.forEach(async (loc) => {
+        if(locMissingGeoLocation(loc)){
+            needsDatabaseUpdating.push(updateLocation(loc))
+        }
+    }).then(()=>{
+        let locsInRangeByCrow = filterByCrowDistances(locations, currLocLonLat, distance, distanceUnit, transport)
+            if(usingGoogleMaps){ //change conditional to googleAPI is present
+                return [];
+            } else if (usingGeoapify){
+                //evaluates locations such that they all contain lon lat values, and filters out
+                //distances longer than the max distance as the crow flies
+                let currLocLonLat = [-73.72208965665413, 42.700251300000005]
+                // let currLocLonLat = await getGeoCode(currentLocation[0], currentLocation[1])
+                return [currLocLonLat, await calculateDistByTripMatrixWGeoapify(currLocLonLat, locsInRangeByCrow, distance, distanceUnit, transport)]
+            }
+        }).then((val)=>{
+            currLoc = val[0]
+            distByTrip =
+            console.log(locsInRangeByCrow)
+            let applicableDistances
 
-app.get('/getShoppingLists', async (req,res) =>{
+            const compareLocationsByDistance = (locOne, locTwo) => {
+                return locOne[4] - locTwo[4]
+            }
+
+            applicableDistances.sort(compareLocationsByDistance(locA,locB))
+            //shrink to maxLocations
+            if(applicableDistances.length > maxLocations){
+                applicableDistances.length == maxLocations
+            }
+            return[applicableDistances, needsDatabaseUpdating]}
+
+        )
+
+    })
+
+}
+
+const earthRadiusMi = 3963; //miles
+const distTwoLonLatPtsMiles = (lonOne, latOne, lonTwo, latTwo) => {
+    let latOneRad = latOne * Math.PI/180;
+    let latTwoRad = latTwo * Math.PI/180;
+    let latDiff = (latTwo-latOne) * Math.PI/180;
+    let lonDiff = (lonTwo-lonOne) * Math.PI/180;
+    let a = Math.sin(latDiff/2) * Math.sin(lonDiff/2) +
+    Math.cos(latOne) * Math.cos(latTwo) * Math.sin(lonDiff/2) * Math.sin(lonDiff/2);
+    let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return earthRadiusMi * c; // in miles
+}
+
+async function filterByCrowDistances(locations,
+    currLocLonLat, maxDistance, distanceUnit, transport){
+    //first, get geospatial locations for all locations missing them (and update their associated db entries)
+
+    let feasLocsByCrow = new Array()
+    //following that, we can compage all of them locally to rule out locations
+    //that are too far as the crow flies
+    for(loc in locations){
+        let miBtByCrow = distTwoLonLatPtsMiles(currLocLonLat[0], currLocLonLat[1], loc[2], loc[3])
+
+        if(distanceUnit==distance_unit_types[0]){//distance given in minutes
+            switch(transport){
+                case transport_types[0]: { //straight-line
+                    throw "cannot measure distance in minutes along a straight line"}
+                    break;
+                case transport_types[1]: {//driving
+                    //we will assume 70 miles an hour
+                    if(miBtByCrow < maxDistance*(70/60)){
+                        feasLocsByCrow.push(loc)
+                    }
+                    break;
+                }
+                case transport_types[2]: {//walking
+                //we will assume 6 miles an hour
+                    if(miBtByCrow < maxDistance*(6/60)){
+                        feasLocsByCrow.push(loc)
+                    }
+                    break;
+                }
+                case transport_types[3]: {//biking
+                    //we will assume 15 miles an hour
+                    if(miBtByCrow < maxDistance*(15/60)){
+                        feasLocsByCrow.push(loc)
+                    }
+                    break;
+                }
+                case transport_types[4]: {//public transit
+                    //we will assume 30 miles an hour
+                    if(miBtByCrow < maxDistance*(30/60)){
+                        feasLocsByCrow.push(loc)
+                    }
+                    break;
+                }
+            }
+        } else if(distanceUnit==distance_unit_types[1] || distanceUnit==distance_unit_types[2]){
+            if(miBtByCrow < maxDistance * ((distanceUnit==distance_unit_types[2]) ? kmPerMi : 1.0)){
+                feasLocsByCrow.push(loc)
+            }
+        } else throw "invalid unit type given"
+    }
+    let retVal = await feasLocsByCrow
+    return retVal;
+}
+
+function getGeoCode(locationName, locationString){
+    let lon, lat;
+    return [lon,lat]
+}
+
+function calculateDistByTripMatrixWGeoapify(currLoc, destLocs, distance, distanceUnit, transport){
+    let [lon1, lat1] = currLoc;
+    let destPoints = new Array;
+    for(let i=0;i<destLocs.distance;i++){
+        destPoints.push([loc[2],loc[3]]);
+    }
+    console.log("destLocs", destLocs)
+    console.log("destPoints", destPoints)
+    switch (transport) {
+        case transport_types[0]: //straight line (by the crow)
+            return destLocs.forEach((dest)=>{
+                    dest[4]=(distTwoLonLatPtsMiles(currLoc[0],currLoc[1],dest[2],dest[3]))
+            })
+        case transport_types[1]:
+            break;
+        case transport_types[2]:
+            break;
+        case transport_types[3]:
+            break;
+        case transport_types[4]:
+            break;
+        default : throw "transportation type "+transport+" not supported"
+    }
+}
+
+const recLoc = (rec) => (locMissingGeoLocation(rec) ?
+[rec.store_name, rec.store_location]
+: [rec.store_name, rec.store_location, rec.store_geolocation.lon, rec.store_geolocation.lat])
+async function attachApplicableReceipts(receipts, locations){
+    await locations.forEach((loc)=>loc[5] = new Array())
+    await receipts.forEach((rec)=>{
+        if(rec.store_geolocation==null){
+            loop1: locations.forEach((loc) => {
+                if(compareLoc_NameString(recLoc(rec), loc)){
+                    console.log("approved")
+                    loc[5].push(rec)
+                }
+            })
+        } else {
+            locations.forEach((loc) =>{
+                if(compareLoc_NameLatLon(recLoc(rec), loc)){
+                    console.log("approved")
+                    loc[5].push({
+                        items: rec.items,
+                        purchase_date: rec.purchase_date,
+                        purchase_time: rec.purchase_time
+                    })
+                }
+            })
+        }
+    })
+    return locations
+}
+
+app.get('/getShoppingListNames', async (req,res) =>{
     console.log("getting user's shopping lists")
     try{
         const usname = req.query.user;

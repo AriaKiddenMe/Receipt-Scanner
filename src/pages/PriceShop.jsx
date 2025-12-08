@@ -4,17 +4,17 @@ import {Await, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import PMCounter from '../components/priceShop/PlusMinusNumberBox';
+import DataTable from '../components/DataTable'
 import {distance_unit_types, transport_types, sys_default_distance,sys_default_distance_unit,
     sys_default_max_stores, sys_default_transport, sys_default_prioritize_favorites,
     sys_default_max_price_age, sys_favorite_stores, max_stores_calculated} from '../constants';
 
 function AdvancedSettings(prioritize_favorites, max_stores, age_default){
     const [advancedSearchVisible, setAdvancedSearchVisible] = useState(false);
-
     let initVal = ((typeof prioritize_favorites)==="boolean")? prioritize_favorites : sys_default_prioritize_favorites;
     const [prior_favs, setPriorFavs] = useState(initVal)
 
-    return <div className="AdvancedSearchParameterBox BoxOfRows">
+    return <div className="AdvancedSearchParameterBox major_section">
         <button className="collapseHeader" onClick={() => setAdvancedSearchVisible(!advancedSearchVisible)}><b>Advanced Settings</b></button>
         <div hidden={advancedSearchVisible} className="AdvancedSearchContents" id="AdvancedSearchContents">
             <div>prioritize favorites?</div>
@@ -38,6 +38,16 @@ function ShoppingListRow({shoppingLists}){
         <select key="selectShoppingList" onChange={(e) => setShoppingList(e.target.value)} value={shopping_list}>
             {shopping_lists.map((listName, index) => <option key={"ShoppingList".concat(index,listName)} value={listName}>{listName}</option>)}
         </select>
+    </div>
+}
+
+function Location({}){
+    const [currentLocation, setCurrentLocation] = useState();
+
+    return <div>
+        <label className="locationDescription">enter current location</label>
+        <input value={currentLocation} type="text" onChange={(e) => setCurrentLocation(e.target.value)} className="LocationInput"></input>
+        <note>must include address, state, and zip code</note>
     </div>
 }
 
@@ -127,7 +137,7 @@ function PriceShop() {
     }, [user, navigate]);
 
     const getShoppingLists = async () => {
-        axios.get('http://localhost:9000/getShoppingLists', { params: {user}}).then((resSL) => {
+        axios.get('http://localhost:9000/getShoppingListNames', { params: {user}}).then((resSL) => {
             shopping_lists.current = resSL.data;
             console.log("ShoppingLists", resSL.data)
         }).then(()=>{
@@ -148,7 +158,7 @@ function PriceShop() {
                 distance_unit.current = distance_unit_types.includes(res.data.def_dist_unit) ? res.data.def_dist_unit : sys_default_distance_unit;
                 max_stores.current = (res.data.def_max_stores < max_stores_calculated && res.data.def_max_stores > 0)? res.data.def_max_stores : sys_default_max_stores;
                 //we cannot have transport equal to minutes if distance unit is equal to straight line
-                transport.current = ((transport_types.includes(res.data.def_transp) && (res.data.def_transp!=="straight line" || res.data.def_dist_unit!=="minutes")) ? res.data.def_transp : sys_default_transport);
+                transport.current = ((transport_types.includes(res.data.def_transp) && (res.data.def_transp!==transport_types[0] || res.data.def_dist_unit!=="minutes")) ? res.data.def_transp : sys_default_transport);
                 prioritize_favorites.current = ((typeof res.data.def_prio_favs)==="boolean")? res.data.def_prio_favs : sys_default_prioritize_favorites;
                 favorite_stores.current = (res.data.fav_stores.length!==0) ? res.data.fav_stores : sys_favorite_stores;
             }else {
@@ -180,7 +190,7 @@ function PriceShop() {
 
 
     const [isLoaded, setIsLoaded] = useState(distance.current!=null && distance_unit.current!=null&&max_stores.current!=null&&transport.current!=null&&prioritize_favorites.current!=null&&favorite_stores.current!=null)
-
+    const [searchTable, setSearchTable] = useState(<table></table>)
     useEffect(() => {
         if(isLoaded) {
             console.log("page is loaded")
@@ -194,12 +204,16 @@ function PriceShop() {
             <Sidebar />
             <div className="content" id="content">
                 <h1><b>Price Shop</b></h1>
-                <div className="PrimarySearchParameterBox BoxOfRows">
+                <div className="PrimarySearchParameterBox major_section">
                     <ShoppingListRow shoppingLists={shopping_lists.current} />
+                    <Location/>
                     <DistanceSelector distance_val_default={distance.current} distance_unit_default={distance_unit.current} distance_transport_default={transport.current} />
                 </div>
                 <AdvancedSettings/>
                 <button className="search" onClick={submitSearch}><b>Search</b></button>
+                <div className="majorSection">
+                    {searchTable}
+                </div>
             </div>
         </>;
     }
@@ -216,22 +230,26 @@ function PriceShop() {
     //POSTSUBMISSION
     function submitSearch(){
         //basic settings
-        let [basicSettings,advancedSettings] =document.getElementById("content").getElementsByClassName("BoxOfRows");
-        let [shoppingList, distance] = basicSettings.children
+        let [basicSettings, advancedSettings, searchResults] =document.getElementById("content").getElementsByClassName("major_section");
+        let [shoppingList, currentLocation, distance] = basicSettings.children
         shoppingList = (shoppingList.children[1].value);
         let distanceUnit = distance.children[2].value;
         let transport = distance.children[3].value;
         distance = distance.children[1].value;
+        currentLocation = currentLocation.children[1].value;
 
         //advanced settings
         advancedSettings=advancedSettings.children[1]
-        let maxPriceAge = advancedSettings.children[3].children[1].value;
-        let maxStores = advancedSettings.children[5].children[1].value;
+        let maxStores = advancedSettings.children[3].children[1].value;
+        let maxPriceAge = advancedSettings.children[5].children[1].value;
         let prioritize_favorites = advancedSettings.children[1].value;
         let fav_stores = favorite_stores.current;
         let fav_stores_length = favorite_stores.current.length;
+
+        console.log("SEARCH RESULTS TABLE", searchResults);
         console.log("BASIC SETTINGS\n",
             "\nshoppingList:", shoppingList,
+            "\ncurrentLocation:", currentLocation,
             "\ndistance:",distance,
             "\ndistanceUnit:",distanceUnit,
             "\ntransportation type:",transport,
@@ -245,6 +263,7 @@ function PriceShop() {
         {axios.get('http://localhost:9000/priceSearch', { params: {
             username: user,
             shoppingList: shoppingList,
+            currentLocation: currentLocation,
             distance: distance,
             distance_unit: distanceUnit,
             transport: transport,
@@ -257,6 +276,11 @@ function PriceShop() {
                 //res.data =
                 if (res.data) {
                     //this holds the an object representing the user's search results
+                    let column = res.data.query("stores")
+                    let data = res.data.query("itemPrices")
+                    setSearchTable(
+                        <DataTable data={data} column={column}/>
+                    )
                 } else {
                     console.error("program should never end up here (via '/getUserSearchPreferences'). This is here for debugging");
                 }

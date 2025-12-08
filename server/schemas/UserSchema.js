@@ -6,22 +6,22 @@
 const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema({
-  f_name: String,
-  l_name: String,
-  username: String,
-  passwordHash: String,
-  searchParameters: {
-    default_distance: Number,
-    default_distance_unit: String,
-    default_max_stores: Number,
-    default_transport: String,
-    default_prioritize_favorites: Boolean,
-    user_favorite_stores: [String], //Syntax(via EBNF) STORE_NAME '(' STORE_ADDRESS ')'
+    f_name: String,
+    l_name: String,
+    username: String,
+    passwordHash: String,
+    searchParameters: {
+        default_distance: {type: Number, default: 20},
+        default_distance_unit:  {type: String, enum: ["minutes", "mi", "km"]},
+        default_max_stores: {type: Number, default: 1},
+        default_transport: {type: String, enum: ["by the crow (straight line)", "driving", "walking", "biking", "public transit"]},
+        default_prioritize_favorites: {type: Boolean, default:false},
+        user_favorite_stores: [String], //Syntax(via EBNF) STORE_NAME '(' STORE_ADDRESS ')'
 
-    preferred_brands: [String],
-    banned_brands: [String],
-    banned_allergens: [String],
-    privacy_flag: Boolean,
+        preferred_brands: [String],
+        banned_brands: [String],
+        banned_allergens: [String],
+        privacy_flag: Boolean,
   },
   default_item_unit_order: [String],
   preferred_brands: [String],

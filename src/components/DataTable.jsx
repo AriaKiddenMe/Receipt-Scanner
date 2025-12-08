@@ -1,7 +1,8 @@
+
 const DataTable = ({data, column}) =>{
     return <table>
         <thead>
-            {(column <= 0)? (
+            {(column.length <= 0) ? (
                 <tr>
                     <th></th>
                     <th></th>
@@ -9,9 +10,9 @@ const DataTable = ({data, column}) =>{
                     <th></th>
                     <th></th>
                 </tr>
-            ):(
-                <tr>{
-                    column.map((item, index) => <TableHeadItem item={item}/>)}
+            ) : (
+                <tr>
+                    {column.map((item, index) => <TableHeadItem item={item}/>)}
                 </tr>
             )}
         </thead>
@@ -37,7 +38,6 @@ const TableRow = ({item, column}) => {
     // <tr>{item.project_name}</tr>
     return <tr>
         {column.map((columnItem, index) =>{
-
             if(columnItem.value.includes('.')){
                 const itemSplit = columnItem.value.split(".") //[object, field]
                 return <td>{getProperties(item,itemSplit)}</td>

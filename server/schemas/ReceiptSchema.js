@@ -18,6 +18,8 @@ const ItemSchema = new mongoose.Schema({
 const ReceiptSchema = new mongoose.Schema( {
     store_name: String,
     store_location: String,
+    //note, longitude and latitude can only get to 180, so a default of 400 is an unset value
+    store_geolocation: {lon: {type: Number, default:400}, lat: {type: Number, default:400}},
     store_phone: String,
     purchase_date: { type: Date },
     purchase_time: String,
