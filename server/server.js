@@ -18,6 +18,7 @@ const {sys_favorite_stores, distance_unit_types, transport_types,
     lat_lon_defaults, oneDegreelatitudeEstMi, oneDegreelongitudeEstMi,
     oneDegreelatitudeEstkm, oneDegreelongitudeEstkm
 } = require('../src/constants');
+const MiPerKm = 1/1.60934;
 const kmPerMi = 1.60934;
 
 const User = require('./schemas/UserSchema');
@@ -531,7 +532,7 @@ app.get('/priceSearch', async (req, res) => {
         //GET USER
         const usr = await User.findOne({
             username: usname
-        }).lean()
+        })
         //if(usrList===null){throw "could not find user " + usname + " for PriceSearch"}
         //if(usrList.length > 1){throw "more than one user found with the username: "+usname}
         //const usr = usrList;//[0];
@@ -539,17 +540,18 @@ app.get('/priceSearch', async (req, res) => {
 
         //GET SHOPPING-LIST
 //        let listArr = await ShoppingList.find({
-        const list = await ShoppingList.find({
+        const list = await ShoppingList.findOne({
             owner_id: usr._id,
             list_name: shoppingListName,
         })
+        
         if(list===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
-        // if(listArr===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
         //if((listArr).isArray&&listArr.length > 1){throw "more than one list \""+list_name+"\" found for the user "+usname + " during PriceSearch"}
+        // if(listArr===null){throw "could not find given shopping list " + usname + " for user " + usname + " during PriceSearch"}
         // const list = listArr[0];
         console.log("ShoppingList: ", list.list_name)
-        console.log("\titems: ", await list.listItems)
-
+        console.log("items: ", list)
+        
         //GET RECEIPTS
         const avail_receipts = await getAvailReceipts(usr, maxPriceAge)
         if(avail_receipts.length==0){ throw "there are no receipts available to this user"}
@@ -564,7 +566,7 @@ app.get('/priceSearch', async (req, res) => {
         console.log("\nlocationsLoaded (so far): ", availFavorites, "\nremaining potential locations:\n", remainingAvailLocations)
 
         //FIND BY DISTANCE reduce remaining stores considered using a maps API to find viable stores.
-        const [locationsByDistance, locationsNeedingUpdating] = await filterLocationsByDistance(remainingAvailLocations, (maxStores - availFavorites.length),
+        const [locationsByDistance, locationsNeedingUpdating] = filterLocationsByDistance(remainingAvailLocations, (maxStores - availFavorites.length),
             currentLocation, distance, distanceUnit, transport);
         const locationsBeingSearched = availFavorites.concat(locationsByDistance);
         console.log("locationsBeingSearched: ", locationsBeingSearched);
@@ -789,53 +791,68 @@ function insertFavorites(availLocations, fav_stores, maxStores){
     return [favLocations, otherLocations, missingFavorites]
 }
 
-function filterLocationsByDistance(locations, maxLocations, currentLocation, distance, distanceUnit, transport){
+
+//
+//
+//
+//
+//
+//
+const compareLocationsByDistance = (locOne, locTwo) => {return locOne[4] - locTwo[4]}
+
+const printAfter = async (msg, lagVal) => {console.log(msg, await lagVal)}
+
+async function filterLocationsByDistance(locations, maxLocations, currentLocation, distance, distanceUnit, transport){
+    
+    console.log("init locs to filter: ", locations)
     // Needs to return a tuple
-    if(locations.length <= 0 && maxLocations <= 0) return [[], []];
+    if(locations.length <= 0 || maxLocations <= 0) return [[], []];
     //verifying input
     if(distance <= 0 || !distance_unit_types.includes(distanceUnit) || !transport_types.includes(transport))
         {throw "invalid input to filter Locations By Distance"}
-
     let needsDatabaseUpdating = new Array()
-    updateLocation = async (loc) => {
-        results = getGeoCode(loc[0],loc[1])
-        loc[2] = await results[0]
-        loc[3] = await results[1]
-        return loc
-    }
-    locations.forEach(async (loc) => {
+    needsDatabaseUpdating = locations.map( async (loc) => {
         if(locMissingGeoLocation(loc)){
-            needsDatabaseUpdating.push(updateLocation(loc))
+            results = await getGeoCode(loc[0],loc[1])
+            loc[2] = results[0]
+            loc[3] = results[1]
+            return await loc
         }
-    }).then(async ()=>{
-        let locsInRangeByCrow = filterByCrowDistances(locations, currLocLonLat, distance, distanceUnit, transport)
-            if(usingGoogleMaps){ //change conditional to googleAPI is present
-                return [];
-            } else if (usingGeoapify){
-                //evaluates locations such that they all contain lon lat values, and filters out
-                //distances longer than the max distance as the crow flies
-                let currLocLonLat = [-73.72208965665413, 42.700251300000005]
-                // let currLocLonLat = await getGeoCode(currentLocation[0], currentLocation[1])
-                return [currLocLonLat, await calculateDistByTripMatrixWGeoapify(currLocLonLat, locsInRangeByCrow, distance, distanceUnit, transport)]
-            }
-        }).then((val)=>{
-            currLoc = val[0]
-            distByTrip = val[1]
-            // Maybe out of scope?
-            //console.log(locsInRangeByCrow)
-            let applicableDistances
+    })
+    printAfter("needsDatabaseUpdating: ", needsDatabaseUpdating)
+    printAfter("locations should be updated(b/f crow): ", locations)
 
-            const compareLocationsByDistance = (locOne, locTwo) => {
-                return locOne[4] - locTwo[4]
-            }
+    let currLoc = await getGeoCode(currentLocation[0], currentLocation[1])
+    printAfter("currentLoc lat and lon", currLoc)
+    /*evaluates locations such that they all contain lon lat values, and 
+    filters out distances longer than the max distance as the crow flies*/
+    let locsInRangeByCrow = await filterByCrowDistances(locations, currLoc, distance, distanceUnit, transport)
+    printAfter("locs after crow filter: ", locsInRangeByCrow);
+    
+    let locationsQuantified = await ((usingGeoapify) ? (calculateDistByTripMatrixWGeoapify(currLoc, locsInRangeByCrow, distance, distanceUnit, transport)) : (usingGoogleMaps) ?  calculateDistByTripMatrixWGoogleMaps(currLoc, locsInRangeByCrow, distance, distanceUnit, transport): new Array(5))
+    
+    printAfter("locs with dist: ", locationsQuantified);
+    
+    if(locationsQuantified === new Array(5)) {
+        console.log(locationsQuantified, needsDatabaseUpdating)
+        return [locationsQuantified, needsDatabaseUpdating]
+    }
+        
+    //sort
+    locationsQuantified.sort(compareLocationsByDistance(locA,locB))
+    //shrink to maxLocations
+    if(locationsQuantified.length > maxLocations){
+        locationsQuantified.length = maxLocations
+    }
 
-            applicableDistances.sort(compareLocationsByDistance(locA,locB))
-            //shrink to maxLocations
-            if(applicableDistances.length > maxLocations){
-                applicableDistances.length = maxLocations
-            }
-            return[applicableDistances, needsDatabaseUpdating];
-    });
+    printAfter("sorted locs with dist: ", locationsQuantified);
+    
+    for(let i = locationsQuantified.length-1; i >= 0 && locationsQuantified[i][4]>=distance; i--){
+        locationsQuantified.pop()
+    }
+    
+    //now filter out those too large 
+    return [locationsQuantified, needsDatabaseUpdating];
 }
 
 const earthRadiusMi = 3963; //miles
@@ -854,32 +871,38 @@ async function filterByCrowDistances(locations,
     currLocLonLat, maxDistance, distanceUnit, transport){
     //first, get geospatial locations for all locations missing them (and update their associated db entries)
 
-    let feasLocsByCrow = new Array()
     //following that, we can compage all of them locally to rule out locations
     //that are too far as the crow flies
-    for(loc in locations){
+    let feasLocsByCrow = []
+    await locations.forEach((loc) => {
         let miBtByCrow = distTwoLonLatPtsMiles(currLocLonLat[0], currLocLonLat[1], loc[2], loc[3])
-
+        console.log("loc: ",loc[0],", diffLon", currLocLonLat[0] - loc[2]," diffLat",currLocLonLat[1] - loc[3], "\ndistance: ", distTwoLonLatPtsMiles(currLocLonLat[0], currLocLonLat[1], loc[2], loc[3]))
+        let feasLocsByCrow = new Array()
         if(distanceUnit==distance_unit_types[0]){//distance given in minutes
+            console.log("loc: ",loc[0], " here")
             switch(transport){
                 case transport_types[0]: { //straight-line
+                    console.log("loc: ",loc[0], " str_ln")
                     throw "cannot measure distance in minutes along a straight line"}
                     break;
-                case transport_types[1]: {//driving
-                    //we will assume 70 miles an hour
-                    if(miBtByCrow < maxDistance*(70/60)){
+                    case transport_types[1]: {//driving
+                        console.log("loc: ",loc[0], " here")
+                        //we will assume 70 miles an hour
+                        if(miBtByCrow < maxDistance*(70/60)){
                         feasLocsByCrow.push(loc)
                     }
                     break;
                 }
                 case transport_types[2]: {//walking
-                //we will assume 6 miles an hour
+                    console.log("loc: ",loc[0], " walk")
+                    //we will assume 6 miles an hour
                     if(miBtByCrow < maxDistance*(6/60)){
                         feasLocsByCrow.push(loc)
                     }
                     break;
                 }
                 case transport_types[3]: {//biking
+                    console.log("loc: ",loc[0], " bike")
                     //we will assume 15 miles an hour
                     if(miBtByCrow < maxDistance*(15/60)){
                         feasLocsByCrow.push(loc)
@@ -887,6 +910,7 @@ async function filterByCrowDistances(locations,
                     break;
                 }
                 case transport_types[4]: {//public transit
+                    console.log("loc: ",loc[0], " pubTr")
                     //we will assume 30 miles an hour
                     if(miBtByCrow < maxDistance*(30/60)){
                         feasLocsByCrow.push(loc)
@@ -895,23 +919,26 @@ async function filterByCrowDistances(locations,
                 }
             }
         } else if(distanceUnit==distance_unit_types[1] || distanceUnit==distance_unit_types[2]){
-            if(miBtByCrow < maxDistance * ((distanceUnit==distance_unit_types[2]) ? kmPerMi : 1.0)){
+            console.log("loc: ",loc[0], "km/mi")
+            if(miBtByCrow < maxDistance * ((distanceUnit==distance_unit_types[2]) ? MiPerKm : 1.0)){
                 feasLocsByCrow.push(loc)
             }
-        } else throw "invalid unit type given"
-    }
-    let retVal = await feasLocsByCrow
-    return retVal;
+        } else throw "should never be of this data type"
+    })
+    printAfter("feasLocsByCrow", feasLocsByCrow)
+    return  feasLocsByCrow
 }
 
-function getGeoCode(locationName, locationString){
-    let lon, lat;
+async function getGeoCode(locationName, locationString){
+    //temporary
+    let currLocLonLat = [-73.72208965665413, 42.700251300000005];
+    let [lon, lat] = currLocLonLat;
     return [lon,lat]
 }
 
 function calculateDistByTripMatrixWGeoapify(currLoc, destLocs, distance, distanceUnit, transport){
-    let [lon1, lat1] = currLoc;
-    let destPoints = new Array;
+    let lon1= currLoc[0], lat1=currLoc[1];
+    let destPoints = new Array();
     for(let i=0;i<destLocs.distance;i++){
         destPoints.push([loc[2],loc[3]]);
     }
@@ -932,6 +959,10 @@ function calculateDistByTripMatrixWGeoapify(currLoc, destLocs, distance, distanc
             break;
         default : throw "transportation type "+transport+" not supported"
     }
+}
+
+function calculateDistByTripMatrixWGoogleMaps(currLocLonLat, locsInRangeByCrow, distance, distanceUnit, transport){
+
 }
 
 const recLoc = (rec) => (locMissingGeoLocation(rec) ?
