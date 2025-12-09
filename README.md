@@ -48,3 +48,6 @@ For the front-end UI such as login and signup, we plan to use and build a React 
 
 ### Testing Account Logins
 {userWithShoppingLists, PineApple$25}
+
+### Testing Scan Path of Receipt Scanner
+Please use the receipt image: "SampleReceipt.jpg" on the test folder "TestReceiptFile" when testing the scan path of the Receipt Scanner application. The file path is [TestReceiptFile/SampleReceipt.jpg].
