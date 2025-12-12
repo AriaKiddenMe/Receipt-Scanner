@@ -5,13 +5,14 @@ import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import PMCounter from '../components/priceShop/PlusMinusNumberBox';
 import DataTable from '../components/DataTable'
-import {distance_unit_types, transport_types, sys_default_distance,sys_default_distance_unit,
-    sys_default_max_stores, sys_default_transport, sys_default_prioritize_favorites,
-    sys_default_max_price_age, sys_favorite_stores, max_stores_calculated} from '../constants';
+import {con} from '../constants'
+// {con.distance_unit_types, con.transport_types, con.sys_default_distance,con.sys_default_distance_unit,
+//     con.sys_default_max_stores, con.sys_default_transport, con.sys_default_prioritize_favorites,
+//     con.sys_default_max_price_age, con.sys_favorite_stores, con.max_stores_calculated} ;
 
 function AdvancedSettings(prioritize_favorites, max_stores, age_default){
     const [advancedSearchVisible, setAdvancedSearchVisible] = useState(false);
-    let initVal = ((typeof prioritize_favorites)==="boolean")? prioritize_favorites : sys_default_prioritize_favorites;
+    let initVal = ((typeof prioritize_favorites)==="boolean")? prioritize_favorites : con.sys_default_prioritize_favorites;
     const [prior_favs, setPriorFavs] = useState(initVal)
 
     return <div className="AdvancedSearchParameterBox major_section">
@@ -20,7 +21,7 @@ function AdvancedSettings(prioritize_favorites, max_stores, age_default){
             <div>prioritize favorites?</div>
             <button description="checkbox" className="PMElem" onClick={() => {setPriorFavs(!prior_favs);}} value={prior_favs}>{(prior_favs)? "yes" : "no"}</button>
             <MaxStoresCounter max_stores_default={max_stores} />
-            <MaxPriceAgeCounter age_default={sys_default_max_price_age} />
+            <MaxPriceAgeCounter age_default={con.sys_default_max_price_age} />
         </div>
     </div>
 }
@@ -42,7 +43,7 @@ function ShoppingListRow({shoppingLists}){
 }
 
 function Location({}){
-    const [currentLocation, setCurrentLocation] = useState();
+    const [currentLocation, setCurrentLocation] = useState(-73.72208965665413,42.700251300000005);//albany
 
     return <div>
         <label className="locationDescription">enter current location</label>
@@ -52,15 +53,18 @@ function Location({}){
 }
 
 function DistanceSelector({distance_val_default, distance_unit_default, distance_transport_default}){
+    distance_transport_default = con.transport_types[0]
     const [distance, setDistance] = useState(
         (((typeof distance_val_default)==="number") && distance_val_default>=0)
-        ? distance_val_default : sys_default_distance);
-    const [distance_unit, setDistanceUnit] = useState(distance_unit_types.includes(distance_unit_default)
-    ? distance_unit_default : sys_default_distance_unit);
+        ? distance_val_default : con.sys_default_distance);
+    const [distance_unit, setDistanceUnit] = useState(
+        con.distance_unit_types.includes(distance_unit_default)
+        &&((distance_unit_default!==con.distance_unit_types[0])||(distance_transport_default!==con.transport_types[0]))
+        ? distance_unit_default : con.distance_unit_types[1]);
     const [transportation_type, setTransportType] = useState(
-        (transport_types.includes(distance_unit_default)
-        &&((distance_unit_default!==distance_unit_types[0])||(distance_transport_default!==transport_types[0])))
-        ? distance_transport_default : sys_default_transport);
+        (con.transport_types.includes(distance_transport_default))
+        ? distance_transport_default : con.sys_default_transport);
+
 
     return <div>
         <b className="distance_label">distance</b>
@@ -71,24 +75,24 @@ function DistanceSelector({distance_val_default, distance_unit_default, distance
                 onChange={(e) => setDistance(e.target.value)}
         />
         <select key="selectUnit" onChange={(e) => {setDistanceUnit(e.target.value)}} value={distance_unit}>
-            <option value={distance_unit_types[0]} key='minuteOption' disabled={transportation_type===transport_types[0]}>
-                {distance_unit_types[0]}
+            <option value={con.distance_unit_types[0]} key='minuteOption' disabled={transportation_type===con.transport_types[0]} hidden={true}>
+                {con.distance_unit_types[0]}
             </option>
-            <option value={distance_unit_types[1]} key='mileOption'>
-                {distance_unit_types[1]}
+            <option value={con.distance_unit_types[1]} key='mileOption'>
+                {con.distance_unit_types[1]}
             </option>
-            <option value={distance_unit_types[2]} key="kmOption">
-                {distance_unit_types[2]}
+            <option value={con.distance_unit_types[2]} key="kmOption">
+                {con.distance_unit_types[2]}
             </option>
         </select>
         <select key="selectTransport" onChange={(e) => {setTransportType(e.target.value);}} value={transportation_type}>
-            {transport_types.map((trprtTy) =>
-                (trprtTy===transport_types[0]) ?
-                    <option key={trprtTy.concat("Option")} value={trprtTy} disabled={distance_unit===distance_unit_types[0]}>
+            {con.transport_types.map((trprtTy) =>
+                (trprtTy===con.transport_types[0]) ?
+                    <option key={trprtTy.concat("Option")} value={trprtTy} disabled={distance_unit===con.distance_unit_types[0]}>
                         {trprtTy}
                     </option>
                 :
-                    <option key={trprtTy.concat("Option")} value={trprtTy}>
+                    <option key={trprtTy.concat("Option")} value={trprtTy} disabled={true} hidden={true}>
                         {trprtTy}
                     </option>
             )
@@ -101,15 +105,15 @@ function MaxStoresCounter({max_stores_default}){
     return <>
         <div className="PMLabel">Stores to Search : </div>
         <PMCounter initialValue={(((typeof max_stores_default)==="number") && max_stores_default > 0) ?
-            max_stores_default:sys_default_max_stores}
-            minValue={1} maxValue={max_stores_calculated} increment={1}></PMCounter>
+            max_stores_default : con.sys_default_max_stores}
+            minValue={1} maxValue={con.max_stores_calculated} increment={1}></PMCounter>
     </>
 }
 
 function MaxPriceAgeCounter({age_default}){
     return <>
         <div className="PMLabel">Price Age limit (days):</div>
-        <PMCounter initialValue={(age_default >= 0) ? age_default : sys_default_max_price_age} minValue={0} maxValue={3*365} increment={1}/>
+        <PMCounter initialValue={(age_default >= 0) ? age_default : con.sys_default_max_price_age} minValue={0} maxValue={3*365} increment={1}/>
     </>
 }
 
@@ -154,13 +158,13 @@ function PriceShop() {
             getShoppingLists();
             if (res.data) {
                 //res.data holds an object representing the user's default search preferences
-                distance.current = (res.data.def_dist>=0)? res.data.def_dist : sys_default_distance;
-                distance_unit.current = distance_unit_types.includes(res.data.def_dist_unit) ? res.data.def_dist_unit : sys_default_distance_unit;
-                max_stores.current = (res.data.def_max_stores < max_stores_calculated && res.data.def_max_stores > 0)? res.data.def_max_stores : sys_default_max_stores;
+                distance.current = (res.data.def_dist>=0)? res.data.def_dist : con.sys_default_distance;
+                distance_unit.current = con.distance_unit_types.includes(res.data.def_dist_unit) ? res.data.def_dist_unit : con.sys_default_distance_unit;
+                max_stores.current = (res.data.def_max_stores < con.max_stores_calculated && res.data.def_max_stores > 0)? res.data.def_max_stores : con.sys_default_max_stores;
                 //we cannot have transport equal to minutes if distance unit is equal to straight line
-                transport.current = ((transport_types.includes(res.data.def_transp) && (res.data.def_transp!==transport_types[0] || res.data.def_dist_unit!=="minutes")) ? res.data.def_transp : sys_default_transport);
-                prioritize_favorites.current = ((typeof res.data.def_prio_favs)==="boolean")? res.data.def_prio_favs : sys_default_prioritize_favorites;
-                favorite_stores.current = (res.data.fav_stores.length!==0) ? res.data.fav_stores : sys_favorite_stores;
+                transport.current = ((con.transport_types.includes(res.data.def_transp) && (res.data.def_transp!==con.transport_types[0] || res.data.def_dist_unit!=="minutes")) ? res.data.def_transp : con.sys_default_transport);
+                prioritize_favorites.current = ((typeof res.data.def_prio_favs)==="boolean")? res.data.def_prio_favs : con.sys_default_prioritize_favorites;
+                favorite_stores.current = (res.data.fav_stores.length!==0) ? res.data.fav_stores : con.sys_favorite_stores;
             }else {
                 console.error("program should never end up here (via '/getUserSearchPreferences'). This is here for debugging");
             }
